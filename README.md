@@ -1,4 +1,6 @@
-# halo2-zk-email
+# halo2-zk-github-wallet
+
+This repo is a for EF PSE acceleration-program: https://github.com/privacy-scaling-explorations/acceleration-program/issues/43
 
 **Email verification circuit in halo2.**
 
