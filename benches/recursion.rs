@@ -2,7 +2,7 @@
 // use halo2_base::halo2_proofs::halo2curves::bn256::{Bn256, Fr, G1Affine};
 // use halo2_base::halo2_proofs::poly::{commitment::Params, kzg::commitment::ParamsKZG};
 // use halo2_base::{gates::range::RangeConfig, utils::PrimeField, Context};
-// use halo2_zk_email::DefaultEmailVerifyCircuit;
+// use halo2_zk_email::DefaultCommitVerifyCircuit;
 // use halo2_zk_email::{downsize_params, evm_prove_agg, gen_agg_key, gen_app_key, gen_params, EMAIL_VERIFY_CONFIG_ENV};
 // use sha2::{self, Digest, Sha256};
 // use snark_verifier_sdk::halo2::{aggregation::AggregationCircuit, gen_proof_shplonk, gen_snark_shplonk};
@@ -54,7 +54,7 @@
 //     let mut group = c.benchmark_group("email bench1 with recursion");
 //     group.sample_size(10);
 //     set_var(EMAIL_VERIFY_CONFIG_ENV, APP_CONFIG_PATH);
-//     let app_config_params = DefaultEmailVerifyCircuit::<Fr>::read_config_params();
+//     let app_config_params = DefaultCommitVerifyCircuit::<Fr>::read_config_params();
 //     let agg_params_path = format!("benches/params_{}.bin", AGG_PARAMS_K);
 //     let app_params_path = format!("benches/params_{}.bin", app_config_params.degree);
 //     gen_or_get_params(&agg_params_path, AGG_PARAMS_K);
@@ -62,11 +62,11 @@
 //     println!("gen_params");
 //     let runtime = Runtime::new().unwrap();
 //     runtime.block_on(async {
-//         let (circuit, _, _, _, _) = DefaultEmailVerifyCircuit::<Fr>::gen_circuit_from_email_path("test_data/test_email1.eml").await;
+//         let (circuit, _, _, _, _) = DefaultCommitVerifyCircuit::<Fr>::gen_circuit_from_email_path("test_data/test_email1.eml").await;
 //         gen_app_key(&app_params_path, APP_CONFIG_PATH, "benches/app.pk", "benches/app.vk", circuit).unwrap()
 //     });
 //     runtime.block_on(async {
-//         let (circuit, _, _, _, _) = DefaultEmailVerifyCircuit::<Fr>::gen_circuit_from_email_path("test_data/test_email1.eml").await;
+//         let (circuit, _, _, _, _) = DefaultCommitVerifyCircuit::<Fr>::gen_circuit_from_email_path("test_data/test_email1.eml").await;
 //         gen_agg_key(
 //             &app_params_path,
 //             &agg_params_path,
@@ -97,7 +97,7 @@
 //     //     .unwrap();
 //     // });
 //     // set_var(EMAIL_VERIFY_CONFIG_ENV, "./configs/bench_agg_email_verify.config");
-//     // let config_params = DefaultEmailVerifyCircuit::<Fr>::read_config_params();
+//     // let config_params = DefaultCommitVerifyCircuit::<Fr>::read_config_params();
 //     // let mut rng = thread_rng();
 //     // let _private_key = RsaPrivateKey::new(&mut rng, config_params.public_key_bits).expect("failed to generate a key");
 //     // let public_key = rsa::RsaPublicKey::from(&_private_key);
@@ -121,11 +121,11 @@
 //     // let new_msg = vec![signature.as_bytes(), b"\r\n", message].concat();
 //     // let (canonicalized_header, canonicalized_body, signature_bytes) = canonicalize_signed_email(&new_msg).unwrap();
 
-//     // let e = RSAPubE::Fix(BigUint::from(DefaultEmailVerifyCircuit::<Fr>::DEFAULT_E));
+//     // let e = RSAPubE::Fix(BigUint::from(DefaultCommitVerifyCircuit::<Fr>::DEFAULT_E));
 //     // let n_big = BigUint::from_radix_le(&public_key.n().clone().to_radix_le(16), 16).unwrap();
 //     // let public_key = RSAPublicKey::<Fr>::new(Value::known(BigUint::from(n_big)), e);
 //     // let signature = RSASignature::<Fr>::new(Value::known(BigUint::from_bytes_be(&signature_bytes)));
-//     // let circuit = DefaultEmailVerifyCircuit {
+//     // let circuit = DefaultCommitVerifyCircuit {
 //     //     header_bytes: canonicalized_header,
 //     //     body_bytes: canonicalized_body,
 //     //     public_key,
@@ -145,7 +145,7 @@
 //     group.bench_function("bench 1", |b| {
 //         b.iter(|| {
 //             runtime.block_on(async {
-//                 let (circuit, _, _, _, _) = DefaultEmailVerifyCircuit::<Fr>::gen_circuit_from_email_path("test_data/test_email1.eml").await;
+//                 let (circuit, _, _, _, _) = DefaultCommitVerifyCircuit::<Fr>::gen_circuit_from_email_path("test_data/test_email1.eml").await;
 //                 evm_prove_agg(
 //                     &app_params_path,
 //                     &agg_params_path,

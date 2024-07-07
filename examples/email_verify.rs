@@ -28,7 +28,7 @@
 // use halo2_rsa::{RSAPubE, RSAPublicKey, RSASignature};
 // use halo2_zk_email::utils::get_email_substrs;
 // use halo2_zk_email::{evm_prove_app, evm_verify_app, gen_app_key, gen_evm_verifier, gen_params};
-// use halo2_zk_email::{DefaultEmailVerifyCircuit, DefaultEmailVerifyPublicInput, EMAIL_VERIFY_CONFIG_ENV};
+// use halo2_zk_email::{DefaultCommitVerifyCircuit, DefaultEmailVerifyPublicInput, EMAIL_VERIFY_CONFIG_ENV};
 // use itertools::Itertools;
 // use mailparse::parse_mail;
 // use num_bigint::BigUint;
@@ -104,7 +104,7 @@
 //     // 2. In this example, we generate a dummy email to construct an email verification circuit based on its configuration file ("./examples/example_email_verify.config").
 //     let circuit_config_path = "./examples/example_email_verify.config";
 //     set_var(EMAIL_VERIFY_CONFIG_ENV, circuit_config_path);
-//     let config_params = DefaultEmailVerifyCircuit::<Fr>::read_config_params();
+//     let config_params = DefaultCommitVerifyCircuit::<Fr>::read_config_params();
 //     let sign_verify_config = config_params.sign_verify_config.expect("sign_verify_config is required");
 //     let mut rng = thread_rng();
 //     let private_key = RsaPrivateKey::new(&mut rng, sign_verify_config.public_key_bits).expect("failed to generate a key");
@@ -132,11 +132,11 @@
 //     println!("canonicalized header:\n{}", String::from_utf8(canonicalized_header.clone()).unwrap());
 //     let body_str = String::from_utf8(canonicalized_body.clone()).unwrap();
 //     println!("canonicalized body:\n{}", body_str);
-//     let e = RSAPubE::Fix(BigUint::from(DefaultEmailVerifyCircuit::<Fr>::DEFAULT_E));
+//     let e = RSAPubE::Fix(BigUint::from(DefaultCommitVerifyCircuit::<Fr>::DEFAULT_E));
 //     let n_big = BigUint::from_radix_le(&public_key.n().clone().to_radix_le(16), 16).unwrap();
 //     let public_key = RSAPublicKey::<Fr>::new(Value::known(BigUint::from(n_big.clone())), e);
 //     let signature = RSASignature::<Fr>::new(Value::known(BigUint::from_bytes_be(&signature_bytes)));
-//     let circuit = DefaultEmailVerifyCircuit {
+//     let circuit = DefaultCommitVerifyCircuit {
 //         header_bytes: canonicalized_header.clone(),
 //         body_bytes: canonicalized_body.clone(),
 //         public_key,
@@ -169,10 +169,10 @@
 //     // 6. Generate a yul bytecode and a Solidity contract of the verifier contract.
 //     let bytecode_path = "./examples/test_verifier.bin";
 //     let solidity_path = "./examples/testVerifier.sol";
-//     gen_evm_verifier::<DefaultEmailVerifyCircuit<Fr>>(params_path, circuit_config_path, vk_path, bytecode_path, solidity_path).unwrap();
+//     gen_evm_verifier::<DefaultCommitVerifyCircuit<Fr>>(params_path, circuit_config_path, vk_path, bytecode_path, solidity_path).unwrap();
 
 //     // 7. Verify the proof on EVM.
-//     let instances = DefaultEmailVerifyCircuit::<Fr>::get_instances_from_default_public_input(&public_input_path);
+//     let instances = DefaultCommitVerifyCircuit::<Fr>::get_instances_from_default_public_input(&public_input_path);
 //     evm_verify_app(circuit_config_path, bytecode_path, evm_proof_path, instances).unwrap();
 //     println!("The proof passed the verification!");
 // }

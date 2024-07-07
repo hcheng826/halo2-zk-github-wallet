@@ -578,7 +578,7 @@ pub fn gen_regex_files(decomposed_regex_config_path: &str, regex_dir_path: &str,
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
 mod test {
-    use crate::{DefaultEmailVerifyCircuit, DefaultEmailVerifyPublicInput};
+    use crate::{DefaultCommitVerifyCircuit, DefaultEmailVerifyPublicInput};
 
     use super::*;
     use cfdkim::{canonicalize_signed_email, resolve_public_key};
@@ -630,16 +630,16 @@ mod test {
         temp_env::with_var(EMAIL_VERIFY_CONFIG_ENV, Some(circuit_config_path), move || {
             let config_params = default_config_params();
             // let (header_: &crate::BodyConfigParamssubstrs, body_substrs) = get_email_substrs(&header_str, &body_str, header_config.substr_regexes.clone(), body_config.substr_regexes.clone());
-            let circuit = DefaultEmailVerifyCircuit::new(email_bytes.clone(), public_key_n.clone());
+            let circuit = DefaultCommitVerifyCircuit::new(email_bytes.clone(), public_key_n.clone());
             let public_input = circuit.gen_default_public_input();
             public_input.write_file(&public_input_path);
             gen_params(params_path, config_params.degree).unwrap();
             gen_keys(params_path, circuit_config_path, pk_path, vk_path, circuit.clone()).unwrap();
             prove(params_path, circuit_config_path, pk_path, proof_path, circuit.clone()).unwrap();
-            let result = verify::<DefaultEmailVerifyCircuit<Fr>>(params_path, circuit_config_path, vk_path, proof_path, public_input_path).unwrap();
+            let result = verify::<DefaultCommitVerifyCircuit<Fr>>(params_path, circuit_config_path, vk_path, proof_path, public_input_path).unwrap();
             assert!(result);
             evm_prove(params_path, circuit_config_path, pk_path, evm_proof_path, circuit.clone()).unwrap();
-            gen_evm_verifier::<DefaultEmailVerifyCircuit<Fr>>(params_path, circuit_config_path, vk_path, sols_dir, None).unwrap();
+            gen_evm_verifier::<DefaultCommitVerifyCircuit<Fr>>(params_path, circuit_config_path, vk_path, sols_dir, None).unwrap();
         });
         evm_verify(circuit_config_path, sols_dir, evm_proof_path, public_input_path, None).await.unwrap();
     }
@@ -679,7 +679,7 @@ mod test {
     //         let header_config = app_config_params.header_config.expect("header_config is required");
     //         let body_config = app_config_params.body_config.expect("body_config is required");
     //         let (header_substrs, body_substrs) = get_email_substrs(&header_str, &body_str, header_config.substr_regexes, body_config.substr_regexes);
-    //         let circuit = DefaultEmailVerifyCircuit::new(email_bytes.clone(), public_key_n.clone());
+    //         let circuit = DefaultCommitVerifyCircuit::new(email_bytes.clone(), public_key_n.clone());
     //         let public_input = DefaultEmailVerifyPublicInput::new(headerhash.clone(), public_key_n.clone(), header_substrs, body_substrs);
     //         let public_input_path = "./build/public_input.json";
     //         public_input.write_file(&public_input_path);
@@ -737,7 +737,7 @@ mod test {
     //                     .collect_vec()
     //             };
     //             assert_eq!(acc.len(), NUM_ACC_INSTANCES);
-    //             let public_fr = DefaultEmailVerifyCircuit::<Fr>::get_instances_from_default_public_input(public_input_path);
+    //             let public_fr = DefaultCommitVerifyCircuit::<Fr>::get_instances_from_default_public_input(public_input_path);
     //             vec![acc, public_fr].concat()
     //         };
     //         evm_verify_agg(app_config_path, agg_config_path, bytecode_path, agg_evm_proof_path, instances).unwrap();

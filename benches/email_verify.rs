@@ -25,7 +25,7 @@ use halo2_base::{gates::range::RangeStrategy::Vertical, SKIP_FIRST_PASS};
 use halo2_regex::defs::{AllstrRegexDef, SubstrRegexDef};
 use halo2_regex::vrm::DecomposedRegexConfig;
 use halo2_rsa::{RSAPubE, RSAPublicKey, RSASignature};
-use halo2_zk_email::{default_config_params, DefaultEmailVerifyCircuit, EMAIL_VERIFY_CONFIG_ENV};
+use halo2_zk_email::{default_config_params, DefaultCommitVerifyCircuit, EMAIL_VERIFY_CONFIG_ENV};
 use itertools::Itertools;
 use mailparse::parse_mail;
 use num_bigint::BigUint;
@@ -123,7 +123,7 @@ fn bench_email_verify1(c: &mut Criterion) {
         _ => panic!("not supportted public key type."),
     };
     let public_key_n = BigUint::from_radix_le(&public_key.n().clone().to_radix_le(16), 16).unwrap();
-    let circuit = DefaultEmailVerifyCircuit::new(email_bytes, public_key_n);
+    let circuit = DefaultCommitVerifyCircuit::new(email_bytes, public_key_n);
 
     MockProver::run(params.k(), &circuit, circuit.instances()).unwrap().assert_satisfied();
     let vk = keygen_vk(&params, &circuit).unwrap();

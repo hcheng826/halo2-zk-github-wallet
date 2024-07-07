@@ -59,7 +59,7 @@ pub fn init_panic_hook() {
     console_error_panic_hook::set_once();
 }
 
-/// Initialize the configurations for [`DefaultEmailVerifyCircuit`].
+/// Initialize the configurations for [`DefaultCommitVerifyCircuit`].
 /// You must call this function once before calling any other functions in this module.
 /// # Arguments
 /// * `config_params` - a json string of [`EmailVerifyConfigParams`].
@@ -202,7 +202,7 @@ pub fn fetch_rsa_public_key(response: String) -> Result<String, JsValue> {
 //     }
 //     let circuit = build_circuit::<Fr>(&email_str, &public_key_n);
 //     log_1(&JsValue::from_str("circuit built"));
-//     let pk = gen_pk::<DefaultEmailVerifyCircuit<Fr>>(&params, &circuit, None);
+//     let pk = gen_pk::<DefaultCommitVerifyCircuit<Fr>>(&params, &circuit, None);
 //     PROVING_KEY.set(pk).unwrap();
 //     Ok(JsValue::NULL)
 // }
@@ -224,7 +224,7 @@ pub fn prove_email(params: JsValue, pk_chunks: JsArray, email_str: String, publi
     log_1(&JsValue::from_str("params read"));
 
     let mut reader = JsArrayReader::new(pk_chunks);
-    let pk = ProvingKey::<G1Affine>::read::<_, DefaultEmailVerifyCircuit<Fr>>(&mut BufReader::new(&mut reader), SerdeFormat::RawBytes)
+    let pk = ProvingKey::<G1Affine>::read::<_, DefaultCommitVerifyCircuit<Fr>>(&mut BufReader::new(&mut reader), SerdeFormat::RawBytes)
         .map_err(|err| JsValue::from_str(&err.to_string()))?;
     log_1(&JsValue::from_str("pk read"));
     let circuit = build_circuit::<Fr>(&email_str, &public_key_n);
@@ -261,7 +261,7 @@ pub fn verify_email_proof(params: JsValue, vk: JsValue, proof: JsValue, public_i
     log_1(&JsValue::from_str("params read"));
 
     let vk = Uint8Array::new(&vk).to_vec();
-    let vk = VerifyingKey::<G1Affine>::read::<_, DefaultEmailVerifyCircuit<Fr>>(&mut BufReader::new(&vk[..]), SerdeFormat::RawBytes)
+    let vk = VerifyingKey::<G1Affine>::read::<_, DefaultCommitVerifyCircuit<Fr>>(&mut BufReader::new(&vk[..]), SerdeFormat::RawBytes)
         .map_err(|err| JsValue::from_str(&err.to_string()))?;
     log_1(&JsValue::from_str("vk read"));
 
@@ -286,12 +286,12 @@ pub fn verify_email_proof(params: JsValue, vk: JsValue, proof: JsValue, public_i
     Ok(JsValue::from_bool(result))
 }
 
-/// Configure the constraints definitions for [`DefaultEmailVerifyCircuit`].
+/// Configure the constraints definitions for [`DefaultCommitVerifyCircuit`].
 /// # Arguments
 /// * `meta` - a constraint system.
 /// # Return values
-/// Return a [`DefaultEmailVerifyConfig`].
-pub(crate) fn configure_wasm<F: PrimeField>(meta: &mut ConstraintSystem<F>) -> DefaultEmailVerifyConfig<F> {
+/// Return a [`DefaultCommitVerifyConfig`].
+pub(crate) fn configure_wasm<F: PrimeField>(meta: &mut ConstraintSystem<F>) -> DefaultCommitVerifyConfig<F> {
     let params = default_config_params();
     let range_config = RangeConfig::configure(
         meta,
@@ -341,7 +341,7 @@ pub(crate) fn configure_wasm<F: PrimeField>(meta: &mut ConstraintSystem<F>) -> D
 
     let instances = meta.instance_column();
     meta.enable_equality(instances);
-    DefaultEmailVerifyConfig {
+    DefaultCommitVerifyConfig {
         sha256_config,
         sign_verify_config,
         header_config,
@@ -351,10 +351,10 @@ pub(crate) fn configure_wasm<F: PrimeField>(meta: &mut ConstraintSystem<F>) -> D
     }
 }
 
-fn build_circuit<F: PrimeField>(email_str: &str, public_key_n: &str) -> DefaultEmailVerifyCircuit<F> {
+fn build_circuit<F: PrimeField>(email_str: &str, public_key_n: &str) -> DefaultCommitVerifyCircuit<F> {
     let email_bytes = email_str.as_bytes().to_vec();
     let public_key_n = BigUint::from_bytes_le(&hex::decode(&public_key_n[2..]).unwrap());
-    DefaultEmailVerifyCircuit {
+    DefaultCommitVerifyCircuit {
         email_bytes,
         public_key_n,
         _f: PhantomData,

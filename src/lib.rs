@@ -1,6 +1,6 @@
 //! Email verification circuit compatible with the [halo2 library developed by privacy-scaling-explorations team](https://github.com/privacy-scaling-explorations/halo2).
 //!
-//! Our email verification circuit [`DefaultEmailVerifyCircuit`] enables you to prove that
+//! Our email verification circuit [`DefaultCommitVerifyCircuit`] enables you to prove that
 //! - your email is authenticated by a domain server with an RSA digital signature according to the DKIM protocol.
 //! - the string in your email satisfies regular expressions (regexes) specified in the circuit.
 //! - the string in the public input of the circuit is a correct substring in your email.
@@ -89,7 +89,7 @@ use std::io::{Read, Write};
 /// The name of env variable for the path to the email configuration json.
 pub const EMAIL_VERIFY_CONFIG_ENV: &'static str = "EMAIL_VERIFY_CONFIG";
 
-/// Public input definition of [`DefaultEmailVerifyCircuit`].
+/// Public input definition of [`DefaultCommitVerifyCircuit`].
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct DefaultEmailVerifyPublicInput {
     /// A decimal string of a commitment of the signature defined as poseidon(rsaSign).
@@ -107,7 +107,7 @@ pub struct DefaultEmailVerifyPublicInput {
 }
 
 impl DefaultEmailVerifyPublicInput {
-    /// Create a public input for [`DefaultEmailVerifyCircuit`].
+    /// Create a public input for [`DefaultCommitVerifyCircuit`].
     ///
     /// # Arguments
     /// * `sign_commit` - a decimal string of a commitment of the signature defined as poseidon(rsaSign).
@@ -208,9 +208,9 @@ impl DefaultEmailVerifyPublicInput {
     }
 }
 
-/// Configuration for [`DefaultEmailVerifyCircuit`].
+/// Configuration for [`DefaultCommitVerifyCircuit`].
 #[derive(Debug, Clone)]
-pub struct DefaultEmailVerifyConfig<F: PrimeField> {
+pub struct DefaultCommitVerifyConfig<F: PrimeField> {
     pub sha256_config: Sha256DynamicConfig<F>,
     pub sign_verify_config: SignVerifyConfig<F>,
     pub header_config: RegexSha2Config<F>,
@@ -222,7 +222,7 @@ pub struct DefaultEmailVerifyConfig<F: PrimeField> {
 
 /// Default email verification circuit.
 #[derive(Debug, Clone)]
-pub struct DefaultEmailVerifyCircuit<F: PrimeField> {
+pub struct DefaultCommitVerifyCircuit<F: PrimeField> {
     /// Email bytes.
     pub email_bytes: Vec<u8>,
     /// A `n` parameter of the RSA public key.
@@ -230,8 +230,8 @@ pub struct DefaultEmailVerifyCircuit<F: PrimeField> {
     _f: PhantomData<F>,
 }
 
-impl<F: PrimeField> Circuit<F> for DefaultEmailVerifyCircuit<F> {
-    type Config = DefaultEmailVerifyConfig<F>;
+impl<F: PrimeField> Circuit<F> for DefaultCommitVerifyCircuit<F> {
+    type Config = DefaultCommitVerifyConfig<F>;
     type FloorPlanner = SimpleFloorPlanner;
 
     fn without_witnesses(&self) -> Self {
@@ -353,7 +353,7 @@ impl<F: PrimeField> Circuit<F> for DefaultEmailVerifyCircuit<F> {
     }
 }
 
-impl<F: PrimeField> CircuitExt<F> for DefaultEmailVerifyCircuit<F> {
+impl<F: PrimeField> CircuitExt<F> for DefaultCommitVerifyCircuit<F> {
     fn num_instance(&self) -> Vec<usize> {
         vec![3]
     }
@@ -364,16 +364,16 @@ impl<F: PrimeField> CircuitExt<F> for DefaultEmailVerifyCircuit<F> {
     }
 }
 
-impl<F: PrimeField> DefaultEmailVerifyCircuit<F> {
+impl<F: PrimeField> DefaultCommitVerifyCircuit<F> {
     pub const DEFAULT_E: u128 = 65537;
 
-    /// Create a new [`DefaultEmailVerifyCircuit`].
+    /// Create a new [`DefaultCommitVerifyCircuit`].
     /// # Arguments
     /// * `email_bytes` - email bytes.
     /// * `public_key_n` - `n` parameter of the RSA public key.
     ///
     /// # Return values
-    /// Return a new [`DefaultEmailVerifyCircuit`].
+    /// Return a new [`DefaultCommitVerifyCircuit`].
     pub fn new(email_bytes: Vec<u8>, public_key_n: BigUint) -> Self {
         Self {
             email_bytes,
@@ -388,7 +388,7 @@ impl<F: PrimeField> DefaultEmailVerifyCircuit<F> {
     /// * `email_path` - a file path of the email file.
     ///
     /// # Return values
-    /// Return a new [`DefaultEmailVerifyCircuit`].
+    /// Return a new [`DefaultCommitVerifyCircuit`].
     #[cfg(not(target_arch = "wasm32"))]
     pub async fn gen_circuit_from_email_path(email_path: &str) -> Self {
         let email_bytes = {
@@ -420,7 +420,7 @@ impl<F: PrimeField> DefaultEmailVerifyCircuit<F> {
     /// * `public_key_path` - a file path of the public key file.
     ///
     /// # Return values
-    /// Return a new [`DefaultEmailVerifyCircuit`].
+    /// Return a new [`DefaultCommitVerifyCircuit`].
     #[cfg(not(target_arch = "wasm32"))]
     pub async fn gen_circuit_from_commit_path(commit_path: &str, public_key_path: &str) -> Self {
         let commit_bytes = {
@@ -433,7 +433,6 @@ impl<F: PrimeField> DefaultEmailVerifyCircuit<F> {
         let mut file = File::open(public_key_path).unwrap();
         let mut contents = String::new();
         file.read_to_string(&mut contents).unwrap();
-        println!("Contents read: {}", contents);
 
         let public_key = RsaPublicKey::from_pkcs1_pem(&contents).unwrap();
         let public_key_n = BigUint::from_bytes_be(&public_key.n().clone().to_bytes_be());
@@ -466,7 +465,7 @@ impl<F: PrimeField> DefaultEmailVerifyCircuit<F> {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    fn configure_native(meta: &mut ConstraintSystem<F>) -> DefaultEmailVerifyConfig<F> {
+    fn configure_native(meta: &mut ConstraintSystem<F>) -> DefaultCommitVerifyConfig<F> {
         let params = default_config_params();
         let range_config = RangeConfig::configure(
             meta,
@@ -543,7 +542,7 @@ impl<F: PrimeField> DefaultEmailVerifyCircuit<F> {
 
         let instances = meta.instance_column();
         meta.enable_equality(instances);
-        DefaultEmailVerifyConfig {
+        DefaultCommitVerifyConfig {
             sha256_config,
             sign_verify_config,
             header_config,
@@ -622,7 +621,7 @@ mod test {
             let email_bytes = vec![signature.as_bytes(), b"\r\n", message].concat();
             println!("email: {}", String::from_utf8(email_bytes.clone()).unwrap());
             let public_key_n = BigUint::from_bytes_be(&public_key.n().clone().to_bytes_be());
-            let circuit = DefaultEmailVerifyCircuit::<Fr>::new(email_bytes, public_key_n);
+            let circuit = DefaultCommitVerifyCircuit::<Fr>::new(email_bytes, public_key_n);
             let instances = circuit.instances();
             let prover = MockProver::run(params.degree, &circuit, instances).unwrap();
             assert_eq!(prover.verify(), Ok(()));
@@ -693,7 +692,7 @@ mod test {
             println!("signature {}", signature);
             let email_bytes = vec![signature.as_bytes(), b"\r\n", message].concat();
             let public_key_n = BigUint::from_bytes_be(&public_key.n().clone().to_bytes_be());
-            let circuit = DefaultEmailVerifyCircuit::<Fr>::new(email_bytes, public_key_n);
+            let circuit = DefaultCommitVerifyCircuit::<Fr>::new(email_bytes, public_key_n);
 
             let instances = circuit.instances();
             let prover = MockProver::run(params.degree, &circuit, instances).unwrap();
@@ -763,7 +762,7 @@ mod test {
         temp_env::with_var(EMAIL_VERIFY_CONFIG_ENV, Some("./configs/test_ex1_email_verify.config"), move || {
             let params = default_config_params();
             let public_key_n = BigUint::from_bytes_be(&public_key.n().clone().to_bytes_be());
-            let circuit = DefaultEmailVerifyCircuit::<Fr>::new(email_bytes.clone(), public_key_n);
+            let circuit = DefaultCommitVerifyCircuit::<Fr>::new(email_bytes.clone(), public_key_n);
 
             let instances = circuit.instances();
             let prover = MockProver::run(params.degree, &circuit, instances).unwrap();
@@ -832,7 +831,7 @@ mod test {
         temp_env::with_var(EMAIL_VERIFY_CONFIG_ENV, Some("./configs/test_ex2_email_verify.config"), move || {
             let params = default_config_params();
             let public_key_n = BigUint::from_bytes_be(&public_key.n().clone().to_bytes_be());
-            let circuit = DefaultEmailVerifyCircuit::<Fr>::new(email_bytes.clone(), public_key_n);
+            let circuit = DefaultCommitVerifyCircuit::<Fr>::new(email_bytes.clone(), public_key_n);
 
             let instances = circuit.instances();
             let prover = MockProver::run(params.degree, &circuit, instances).unwrap();
@@ -880,7 +879,7 @@ mod test {
         temp_env::with_var(EMAIL_VERIFY_CONFIG_ENV, Some("./configs/test_ex3_email_verify.config"), move || {
             let params = default_config_params();
             let public_key_n = BigUint::from_bytes_be(&public_key.n().clone().to_bytes_be());
-            let circuit = DefaultEmailVerifyCircuit::<Fr>::new(email_bytes.clone(), public_key_n);
+            let circuit = DefaultCommitVerifyCircuit::<Fr>::new(email_bytes.clone(), public_key_n);
 
             let instances = circuit.instances();
             let prover = MockProver::run(params.degree, &circuit, instances).unwrap();
@@ -953,7 +952,7 @@ mod test {
                 public_key_n_bytes[i] = 255;
             }
             let public_key_n = BigUint::from_bytes_be(&public_key_n_bytes);
-            let circuit = DefaultEmailVerifyCircuit::<Fr>::new(email_bytes.clone(), public_key_n);
+            let circuit = DefaultCommitVerifyCircuit::<Fr>::new(email_bytes.clone(), public_key_n);
 
             let instances = circuit.instances();
             let prover = MockProver::run(params.degree, &circuit, instances).unwrap();
@@ -1022,7 +1021,7 @@ mod test {
         temp_env::with_var(EMAIL_VERIFY_CONFIG_ENV, Some("./configs/test_ex1_email_verify.config"), move || {
             let params = default_config_params();
             let public_key_n = BigUint::from_bytes_be(&public_key.n().clone().to_bytes_be());
-            let circuit = DefaultEmailVerifyCircuit::<Fr>::new(email_bytes.clone(), public_key_n);
+            let circuit = DefaultCommitVerifyCircuit::<Fr>::new(email_bytes.clone(), public_key_n);
 
             let instances = circuit.instances();
             let prover = MockProver::run(params.degree, &circuit, instances).unwrap();

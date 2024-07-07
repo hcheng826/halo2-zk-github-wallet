@@ -3,7 +3,7 @@ use halo2_dynamic_sha256::*;
 use halo2_regex::defs::{AllstrRegexDef, RegexDefs, SubstrRegexDef};
 use std::fs::File;
 // use regex_sha2_base64::RegexSha2Base64Config;
-use crate::{DefaultEmailVerifyCircuit, RegexSha2Base64Config, RegexSha2Config, SignVerifyConfig};
+use crate::{DefaultCommitVerifyCircuit, RegexSha2Base64Config, RegexSha2Config, SignVerifyConfig};
 use once_cell::sync::OnceCell;
 
 #[cfg(not(test))]
@@ -37,7 +37,6 @@ pub static GLOBAL_BODYHASH_DEFS_AND_ID: OnceCell<(RegexDefs, usize)> = OnceCell:
 pub static GLOBAL_HEADER_DEFS: OnceCell<Vec<RegexDefs>> = OnceCell::new();
 #[cfg(target_arch = "wasm32")]
 pub static GLOBAL_BODY_DEFS: OnceCell<Vec<RegexDefs>> = OnceCell::new();
-
 
 /// The name of env variable for the path to the email configuration json.
 pub const EMAIL_VERIFY_CONFIG_ENV: &'static str = "EMAIL_VERIFY_CONFIG";
@@ -91,7 +90,7 @@ pub struct SignVerifyConfigParams {
 
 /// Configuration parameters for the email verification circuits.
 ///
-/// Although the types of some parameters are defined as [`Option`], you will get an error if they are omitted for [`DefaultEmailVerifyCircuit`].
+/// Although the types of some parameters are defined as [`Option`], you will get an error if they are omitted for [`DefaultCommitVerifyCircuit`].
 /// You can build a circuit that accepts the same format configuration file except that some parameters are omitted.
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct EmailVerifyConfigParams {

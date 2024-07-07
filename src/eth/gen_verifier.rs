@@ -20,7 +20,7 @@ use std::path::PathBuf;
 use std::rc::Rc;
 
 pub fn gen_sol_verifiers(params: &ParamsKZG<Bn256>, vk: &VerifyingKey<G1Affine>, max_line_size_per_file: usize, sols_dir: &PathBuf) {
-    let yul = gen_evm_verifier_yul::<DefaultEmailVerifyCircuit<Fr>>(params, vk, vec![3usize]);
+    let yul = gen_evm_verifier_yul::<DefaultCommitVerifyCircuit<Fr>>(params, vk, vec![3usize]);
     let (sols, max_transcript_addr) = gen_evm_verifier_sols_from_yul(&yul, max_line_size_per_file).unwrap();
     {
         fs::create_dir_all(&sols_dir).unwrap();
