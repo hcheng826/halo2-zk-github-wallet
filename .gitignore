@@ -31,3 +31,4 @@
 /examples/*.json
 *.log
 .DS_Store
+.env

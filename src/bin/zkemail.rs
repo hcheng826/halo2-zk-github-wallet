@@ -37,6 +37,9 @@ enum Commands {
         /// emails path
         #[arg(short, long, default_value = "./examples/demo.eml")]
         email_path: String,
+        /// GPG public key path
+        #[arg(long, default_value = "./examples/demo.rsapubkey")]
+        public_key_path: String,
         /// proving key path
         #[arg(long, default_value = "./build/app.pk")]
         pk_path: String,
@@ -173,10 +176,11 @@ async fn main() {
             params_path,
             circuit_config_path,
             email_path,
+            public_key_path,
             pk_path,
             vk_path,
         } => {
-            let circuit = DefaultEmailVerifyCircuit::<Fr>::gen_circuit_from_email_path(&email_path).await;
+            let circuit = DefaultEmailVerifyCircuit::<Fr>::gen_circuit_from_commit_path(&email_path, &public_key_path).await;
             gen_keys(&params_path, &circuit_config_path, &pk_path, &vk_path, circuit).expect("key generation failed");
         }
         Commands::Prove {

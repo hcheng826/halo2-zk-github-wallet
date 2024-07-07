@@ -79,6 +79,7 @@ use itertools::Itertools;
 use num_bigint::BigUint;
 use regex_sha2_base64::RegexSha2Base64Config;
 use rsa::traits::PublicKeyParts;
+use rsa::{pkcs1::DecodeRsaPublicKey, RsaPublicKey};
 use sha2::{Digest, Sha256};
 #[cfg(not(target_arch = "wasm32"))]
 use snark_verifier::loader::LoadedScalar;
@@ -409,6 +410,35 @@ impl<F: PrimeField> DefaultEmailVerifyCircuit<F> {
             }
         };
         let circuit = Self::new(email_bytes, public_key_n);
+        circuit
+    }
+
+    /// Generate a new circuit from the given commit file.
+    ///
+    /// # Arguments
+    /// * `commit_path` - a file path of the commit file.
+    /// * `public_key_path` - a file path of the public key file.
+    ///
+    /// # Return values
+    /// Return a new [`DefaultEmailVerifyCircuit`].
+    #[cfg(not(target_arch = "wasm32"))]
+    pub async fn gen_circuit_from_commit_path(commit_path: &str, public_key_path: &str) -> Self {
+        let commit_bytes = {
+            let mut f = File::open(commit_path).unwrap();
+            let mut buf = Vec::new();
+            f.read_to_end(&mut buf).unwrap();
+            buf
+        };
+
+        let mut file = File::open(public_key_path).unwrap();
+        let mut contents = String::new();
+        file.read_to_string(&mut contents).unwrap();
+        println!("Contents read: {}", contents);
+
+        let public_key = RsaPublicKey::from_pkcs1_pem(&contents).unwrap();
+        let public_key_n = BigUint::from_bytes_be(&public_key.n().clone().to_bytes_be());
+
+        let circuit = Self::new(commit_bytes, public_key_n);
         circuit
     }
 
