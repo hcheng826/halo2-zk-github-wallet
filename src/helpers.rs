@@ -1,9 +1,9 @@
 use crate::eth::deploy_and_call_verifiers;
 // use crate::snark_verifier_sdk::*;
 use crate::eth::gen_verifier::gen_sol_verifiers;
-use crate::{default_config_params, DefaultEmailVerifyPublicInput};
+use crate::{default_config_params, DefaultCommitVerifyPublicInput};
 // use crate::eth::{gen_evm_verifier_sols, gen_evm_verifier_yul};
-use crate::utils::get_email_substrs;
+use crate::utils::get_payload_substrs;
 use crate::vrm::DecomposedRegexConfig;
 use crate::EMAIL_VERIFY_CONFIG_ENV;
 use ark_std::{end_timer, start_timer};
@@ -270,7 +270,7 @@ fn verify_util<C: CircuitExt<Fr>>(params_path: &str, circuit_config_path: &str, 
         let mut reader = BufReader::new(f);
         VerifyingKey::<G1Affine>::read::<_, C>(&mut reader, SerdeFormat::RawBytesUnchecked).unwrap()
     };
-    let public_input = serde_json::from_reader::<_, DefaultEmailVerifyPublicInput>(File::open(public_input_path).unwrap()).unwrap();
+    let public_input = serde_json::from_reader::<_, DefaultCommitVerifyPublicInput>(File::open(public_input_path).unwrap()).unwrap();
     let instances = public_input.instances::<Fr>();
     let result = {
         let mut transcript_read = PoseidonTranscript::<NativeLoader, &[u8]>::new(&proof);
@@ -578,7 +578,7 @@ pub fn gen_regex_files(decomposed_regex_config_path: &str, regex_dir_path: &str,
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
 mod test {
-    use crate::{DefaultCommitVerifyCircuit, DefaultEmailVerifyPublicInput};
+    use crate::{DefaultCommitVerifyCircuit, DefaultCommitVerifyPublicInput};
 
     use super::*;
     use cfdkim::{canonicalize_signed_email, resolve_public_key};
@@ -592,57 +592,57 @@ mod test {
     use std::{fs::File, io::Read, path::Path};
     use temp_env;
 
-    #[ignore]
-    #[tokio::test]
-    async fn test_helper_app_circuit() {
-        gen_regex_files("./test_data/bodyhash_defs.json", "./test_data", "body_hash").unwrap();
-        gen_regex_files("./test_data/from_defs.json", "./test_data", "from").unwrap();
-        gen_regex_files("./test_data/to_defs.json", "./test_data", "to").unwrap();
-        gen_regex_files("./test_data/subject_defs.json", "./test_data", "subject").unwrap();
-        gen_regex_files("./test_data/test_ex1_email_body_defs.json", "./test_data", "test_ex1_email_body").unwrap();
-        let email_path = "./test_data/test_email1.eml";
-        let email_bytes = {
-            let mut f = File::open(email_path).unwrap();
-            let mut buf = Vec::new();
-            f.read_to_end(&mut buf).unwrap();
-            buf
-        };
-        println!("email {}", String::from_utf8(email_bytes.clone()).unwrap());
-        let public_key_n = {
-            let logger = slog::Logger::root(slog::Discard, slog::o!());
-            match resolve_public_key(&logger, &email_bytes).await.unwrap() {
-                cfdkim::DkimPublicKey::Rsa(_pk) => BigUint::from_radix_le(&_pk.n().clone().to_radix_le(16), 16).unwrap(),
-                _ => {
-                    panic!("Only RSA keys are supported.");
-                }
-            }
-        };
-        // let header_str = String::from_utf8(canonicalized_header.clone()).unwrap();
-        // let body_str = String::from_utf8(canonicalized_body.clone()).unwrap();
-        let circuit_config_path = "./configs/app_bench.config";
-        let public_input_path = "./build/public_input.json";
-        let params_path = "./build/test.params";
-        let pk_path = "./build/test.pk";
-        let vk_path = "./build/test.vk";
-        let proof_path = "./build/test.proof";
-        let evm_proof_path = "./build/test_evm.proof";
-        let sols_dir = "./build/test_sols";
-        temp_env::with_var(EMAIL_VERIFY_CONFIG_ENV, Some(circuit_config_path), move || {
-            let config_params = default_config_params();
-            // let (header_: &crate::BodyConfigParamssubstrs, body_substrs) = get_email_substrs(&header_str, &body_str, header_config.substr_regexes.clone(), body_config.substr_regexes.clone());
-            let circuit = DefaultCommitVerifyCircuit::new(email_bytes.clone(), public_key_n.clone());
-            let public_input = circuit.gen_default_public_input();
-            public_input.write_file(&public_input_path);
-            gen_params(params_path, config_params.degree).unwrap();
-            gen_keys(params_path, circuit_config_path, pk_path, vk_path, circuit.clone()).unwrap();
-            prove(params_path, circuit_config_path, pk_path, proof_path, circuit.clone()).unwrap();
-            let result = verify::<DefaultCommitVerifyCircuit<Fr>>(params_path, circuit_config_path, vk_path, proof_path, public_input_path).unwrap();
-            assert!(result);
-            evm_prove(params_path, circuit_config_path, pk_path, evm_proof_path, circuit.clone()).unwrap();
-            gen_evm_verifier::<DefaultCommitVerifyCircuit<Fr>>(params_path, circuit_config_path, vk_path, sols_dir, None).unwrap();
-        });
-        evm_verify(circuit_config_path, sols_dir, evm_proof_path, public_input_path, None).await.unwrap();
-    }
+    // #[ignore]
+    // #[tokio::test]
+    // async fn test_helper_app_circuit() {
+    //     gen_regex_files("./test_data/bodyhash_defs.json", "./test_data", "body_hash").unwrap();
+    //     gen_regex_files("./test_data/from_defs.json", "./test_data", "from").unwrap();
+    //     gen_regex_files("./test_data/to_defs.json", "./test_data", "to").unwrap();
+    //     gen_regex_files("./test_data/subject_defs.json", "./test_data", "subject").unwrap();
+    //     gen_regex_files("./test_data/test_ex1_email_body_defs.json", "./test_data", "test_ex1_email_body").unwrap();
+    //     let email_path = "./test_data/test_email1.eml";
+    //     let email_bytes = {
+    //         let mut f = File::open(email_path).unwrap();
+    //         let mut buf = Vec::new();
+    //         f.read_to_end(&mut buf).unwrap();
+    //         buf
+    //     };
+    //     println!("email {}", String::from_utf8(email_bytes.clone()).unwrap());
+    //     let public_key_n = {
+    //         let logger = slog::Logger::root(slog::Discard, slog::o!());
+    //         match resolve_public_key(&logger, &email_bytes).await.unwrap() {
+    //             cfdkim::DkimPublicKey::Rsa(_pk) => BigUint::from_radix_le(&_pk.n().clone().to_radix_le(16), 16).unwrap(),
+    //             _ => {
+    //                 panic!("Only RSA keys are supported.");
+    //             }
+    //         }
+    //     };
+    //     // let header_str = String::from_utf8(canonicalized_header.clone()).unwrap();
+    //     // let body_str = String::from_utf8(canonicalized_body.clone()).unwrap();
+    //     let circuit_config_path = "./configs/app_bench.config";
+    //     let public_input_path = "./build/public_input.json";
+    //     let params_path = "./build/test.params";
+    //     let pk_path = "./build/test.pk";
+    //     let vk_path = "./build/test.vk";
+    //     let proof_path = "./build/test.proof";
+    //     let evm_proof_path = "./build/test_evm.proof";
+    //     let sols_dir = "./build/test_sols";
+    //     temp_env::with_var(EMAIL_VERIFY_CONFIG_ENV, Some(circuit_config_path), move || {
+    //         let config_params = default_config_params();
+    //         // let (header_: &crate::BodyConfigParamssubstrs, body_substrs) = get_email_substrs(&header_str, &body_str, header_config.substr_regexes.clone(), body_config.substr_regexes.clone());
+    //         let circuit = DefaultCommitVerifyCircuit::new(email_bytes.clone(), public_key_n.clone());
+    //         let public_input = circuit.gen_default_public_input();
+    //         public_input.write_file(&public_input_path);
+    //         gen_params(params_path, config_params.degree).unwrap();
+    //         gen_keys(params_path, circuit_config_path, pk_path, vk_path, circuit.clone()).unwrap();
+    //         prove(params_path, circuit_config_path, pk_path, proof_path, circuit.clone()).unwrap();
+    //         let result = verify::<DefaultCommitVerifyCircuit<Fr>>(params_path, circuit_config_path, vk_path, proof_path, public_input_path).unwrap();
+    //         assert!(result);
+    //         evm_prove(params_path, circuit_config_path, pk_path, evm_proof_path, circuit.clone()).unwrap();
+    //         gen_evm_verifier::<DefaultCommitVerifyCircuit<Fr>>(params_path, circuit_config_path, vk_path, sols_dir, None).unwrap();
+    //     });
+    //     evm_verify(circuit_config_path, sols_dir, evm_proof_path, public_input_path, None).await.unwrap();
+    // }
 
     // #[ignore]
     // #[tokio::test]
@@ -680,7 +680,7 @@ mod test {
     //         let body_config = app_config_params.body_config.expect("body_config is required");
     //         let (header_substrs, body_substrs) = get_email_substrs(&header_str, &body_str, header_config.substr_regexes, body_config.substr_regexes);
     //         let circuit = DefaultCommitVerifyCircuit::new(email_bytes.clone(), public_key_n.clone());
-    //         let public_input = DefaultEmailVerifyPublicInput::new(headerhash.clone(), public_key_n.clone(), header_substrs, body_substrs);
+    //         let public_input = DefaultCommitVerifyPublicInput::new(headerhash.clone(), public_key_n.clone(), header_substrs, body_substrs);
     //         let public_input_path = "./build/public_input.json";
     //         public_input.write_file(&public_input_path);
     //         let app_params_path = "./build/test_app.params";

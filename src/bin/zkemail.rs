@@ -34,7 +34,7 @@ enum Commands {
         /// email verification circuit configure file
         #[arg(short, long, default_value = "./configs/default_app.config")]
         circuit_config_path: String,
-        /// emails path
+        /// commit path
         #[arg(short, long, default_value = "./examples/demo.commit")]
         commit_path: String,
         /// RSA public key path
@@ -57,9 +57,9 @@ enum Commands {
         /// proving key path
         #[arg(long, default_value = "./build/app.pk")]
         pk_path: String,
-        /// emails path
-        #[arg(short, long, default_value = "./examples/demo.eml")]
-        email_path: String,
+        /// commit path
+        #[arg(short, long, default_value = "./examples/demo.commit")]
+        commit_path: String,
         /// output proof file
         #[arg(long, default_value = "./build/app.proof")]
         proof_path: String,
@@ -80,9 +80,9 @@ enum Commands {
         /// proving key path
         #[arg(long, default_value = "./build/app.pk")]
         pk_path: String,
-        /// emails path
-        #[arg(short, long, default_value = "./examples/demo.eml")]
-        email_path: String,
+        /// commit path
+        #[arg(short, long, default_value = "./examples/demo.commit")]
+        commit_path: String,
         /// output proof file
         #[arg(long, default_value = "./build/app_evm.proof")]
         proof_path: String,
@@ -193,13 +193,13 @@ async fn main() {
             params_path,
             circuit_config_path,
             pk_path,
-            email_path,
+            commit_path,
             proof_path,
             public_input_path,
             public_key_path,
         } => {
             set_var(EMAIL_VERIFY_CONFIG_ENV, &circuit_config_path);
-            let circuit = DefaultCommitVerifyCircuit::<Fr>::gen_circuit_from_commit_path(&email_path, &public_key_path).await;
+            let circuit = DefaultCommitVerifyCircuit::<Fr>::gen_circuit_from_commit_path(&commit_path, &public_key_path).await;
             let public_input = circuit.gen_default_public_input();
             prove(&params_path, &circuit_config_path, &pk_path, &proof_path, circuit).unwrap();
             serde_json::to_writer_pretty(File::create(&public_input_path).unwrap(), &public_input).unwrap();
@@ -208,15 +208,18 @@ async fn main() {
             params_path,
             circuit_config_path,
             pk_path,
-            email_path,
+            commit_path,
             proof_path,
             public_input_path,
             public_key_path,
         } => {
             set_var(EMAIL_VERIFY_CONFIG_ENV, &circuit_config_path);
-            let circuit = DefaultCommitVerifyCircuit::<Fr>::gen_circuit_from_commit_path(&email_path, &public_key_path).await;
+            let circuit = DefaultCommitVerifyCircuit::<Fr>::gen_circuit_from_commit_path(&commit_path, &public_key_path).await;
+            println!("circuit: {:?}", circuit);
             let public_input = circuit.gen_default_public_input();
+            println!("public_input: {:?}", public_input);
             evm_prove(&params_path, &circuit_config_path, &pk_path, &proof_path, circuit).unwrap();
+            println!("public_input_path: {:?}", public_input_path);
             serde_json::to_writer_pretty(File::create(&public_input_path).unwrap(), &public_input).unwrap();
         }
         Commands::Verify {

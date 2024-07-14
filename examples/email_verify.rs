@@ -28,7 +28,7 @@
 // use halo2_rsa::{RSAPubE, RSAPublicKey, RSASignature};
 // use halo2_zk_email::utils::get_email_substrs;
 // use halo2_zk_email::{evm_prove_app, evm_verify_app, gen_app_key, gen_evm_verifier, gen_params};
-// use halo2_zk_email::{DefaultCommitVerifyCircuit, DefaultEmailVerifyPublicInput, EMAIL_VERIFY_CONFIG_ENV};
+// use halo2_zk_email::{DefaultCommitVerifyCircuit, DefaultCommitVerifyPublicInput, EMAIL_VERIFY_CONFIG_ENV};
 // use itertools::Itertools;
 // use mailparse::parse_mail;
 // use num_bigint::BigUint;
@@ -153,7 +153,7 @@
 //     let body_config = config_params.body_config.expect("body_config is required");
 //     let (header_substrs, body_substrs) = get_email_substrs(&header_str, &body_str, header_config.substr_regexes, body_config.substr_regexes);
 //     let headerhash = Sha256::digest(&canonicalized_header).to_vec();
-//     let public_input = DefaultEmailVerifyPublicInput::new(headerhash.clone(), n_big, header_substrs, body_substrs);
+//     let public_input = DefaultCommitVerifyPublicInput::new(headerhash.clone(), n_big, header_substrs, body_substrs);
 //     let public_input_path = "./examples/public_input.json";
 //     public_input.write_file(&public_input_path);
 //     let params_path = "./examples/test.params";

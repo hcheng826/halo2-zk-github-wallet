@@ -5,7 +5,7 @@ type MultiThread = typeof import('halo2-zk-email');
 /**
  * The public input of the default email verification circuit.
  */
-interface DefaultEmailVerifyPublicInput {
+interface DefaultCommitVerifyPublicInput {
     // A decimal string of a commitment of the signature defined as poseidon(rsaSign).
     sign_commit: string,
     // A decimal string of the poseidon hash of the `n` parameter in the RSA public key. (The e parameter is fixed to 65537.)
@@ -144,7 +144,7 @@ export async function runBench(emailStr: string, times: number) {
  * @param publicKey The RSA public key.
  * @returns The hex string of the proof and the public input.
 */
-export function proveEmail(multiThread: MultiThread, params: Uint8Array, pkChunks: Uint8Array[], emailStr: string, publicKey: string): [string, DefaultEmailVerifyPublicInput] {
+export function proveEmail(multiThread: MultiThread, params: Uint8Array, pkChunks: Uint8Array[], emailStr: string, publicKey: string): [string, DefaultCommitVerifyPublicInput] {
     const proofOut = multiThread.prove_email(params, pkChunks, emailStr, publicKey);
     return [proofOut[0], proofOut[1]];
 }
@@ -158,7 +158,7 @@ export function proveEmail(multiThread: MultiThread, params: Uint8Array, pkChunk
  * @param publicInput The public input.
  * @returns The result of the verification.
 */
-export function verifyEmailProof(multiThread: MultiThread, params: Uint8Array, vk: Uint8Array, proof: string, publicInput: DefaultEmailVerifyPublicInput): boolean {
+export function verifyEmailProof(multiThread: MultiThread, params: Uint8Array, vk: Uint8Array, proof: string, publicInput: DefaultCommitVerifyPublicInput): boolean {
     const isValid = multiThread.verify_email_proof(params, vk, proof, publicInput);
     return isValid;
 }

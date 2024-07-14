@@ -92,19 +92,15 @@ pub const EMAIL_VERIFY_CONFIG_ENV: &'static str = "EMAIL_VERIFY_CONFIG";
 
 /// Public input definition of [`DefaultCommitVerifyCircuit`].
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct DefaultEmailVerifyPublicInput {
+pub struct DefaultCommitVerifyPublicInput {
     /// A decimal string of a commitment of the signature defined as poseidon(rsaSign).
     pub sign_commit: String,
     /// A decimal string of the poseidon hash of the `n` parameter in the RSA public key. (The e parameter is fixed to 65537.)
     pub public_key_hash: String,
-    /// The start position of the substrings in the email header.
-    pub header_starts: Vec<usize>,
-    /// The substrings in the email header.
-    pub header_substrs: Vec<String>,
-    /// The start position of the substrings in the email body.
-    pub body_starts: Vec<usize>,
-    /// The substrings in the email body.
-    pub body_substrs: Vec<String>,
+    /// The start positions of substrings in the commit payload.
+    pub payload_starts: Vec<usize>,
+    /// The substrings in the commit payload.
+    pub payload_substrs: Vec<String>,
 }
 
 #[derive(serde::Deserialize)]
@@ -123,55 +119,40 @@ struct Verification {
     payload: String,
 }
 
-impl DefaultEmailVerifyPublicInput {
+impl DefaultCommitVerifyPublicInput {
     /// Create a public input for [`DefaultCommitVerifyCircuit`].
     ///
     /// # Arguments
     /// * `sign_commit` - a decimal string of a commitment of the signature defined as poseidon(rsaSign).
     /// * `public_key_hash` - a decimal string of the poseidon hash of the `n` parameter in the RSA public key.
-    /// * `header_substrs` a vector of (the start position, the bytes) of the substrings in the email header.
-    /// * `body_starts` - a vector of (the start position, the bytes) of the substrings in the email body.
+    /// * `payload_substrs` - a vector of (the start position, the bytes) of the substrings in the email body.
     /// # Return values
-    /// Return a new [`DefaultEmailVerifyPublicInput`].
-    pub fn new<F: PrimeField>(sign_commit: F, public_key_hash: F, header_substrs: Vec<Option<(usize, String)>>, body_substrs: Vec<Option<(usize, String)>>) -> Self {
-        let mut header_starts_vec = vec![];
-        let mut header_substrs_vec = vec![];
-        // println!("header_substrs {:?}", header_substrs);
-        for s in header_substrs.into_iter() {
+    /// Return a new [`DefaultCommitVerifyPublicInput`].
+    pub fn new<F: PrimeField>(sign_commit: F, public_key_hash: F, payload_substrs: Vec<Option<(usize, String)>>) -> Self {
+        let mut payload_starts_vec = vec![];
+        let mut payload_substrs_vec = vec![];
+        for s in payload_substrs.into_iter() {
             if let Some(s) = s {
-                header_starts_vec.push(s.0);
-                header_substrs_vec.push(s.1);
+                payload_starts_vec.push(s.0);
+                payload_substrs_vec.push(s.1);
             } else {
-                header_starts_vec.push(0);
-                header_substrs_vec.push("".to_string());
-            }
-        }
-        let mut body_starts_vec = vec![];
-        let mut body_substrs_vec = vec![];
-        for s in body_substrs.into_iter() {
-            if let Some(s) = s {
-                body_starts_vec.push(s.0);
-                body_substrs_vec.push(s.1);
-            } else {
-                body_starts_vec.push(0);
-                body_substrs_vec.push("".to_string());
+                payload_starts_vec.push(0);
+                payload_substrs_vec.push("".to_string());
             }
         }
         let field2string = |val: &F| {
             let big = fe_to_biguint(val);
             big.to_str_radix(10)
         };
-        DefaultEmailVerifyPublicInput {
+        DefaultCommitVerifyPublicInput {
             sign_commit: field2string(&sign_commit),
             public_key_hash: field2string(&public_key_hash),
-            header_starts: header_starts_vec,
-            header_substrs: header_substrs_vec,
-            body_starts: body_starts_vec,
-            body_substrs: body_substrs_vec,
+            payload_starts: payload_starts_vec,
+            payload_substrs: payload_substrs_vec,
         }
     }
 
-    /// Output [`DefaultEmailVerifyPublicInput`] to a json file.
+    /// Output [`DefaultCommitVerifyPublicInput`] to a json file.
     ///
     /// # Arguments
     /// * `public_input_path` - a file path of the output json file.
@@ -192,12 +173,12 @@ impl DefaultEmailVerifyPublicInput {
             let max_byte_size = config_params.header_config.as_ref().unwrap().max_variable_byte_size;
             let mut expected_masked_chars = vec![0u8; max_byte_size];
             let mut expected_substr_ids = vec![0u8; max_byte_size];
-            for (idx, (substr, start_idx)) in self.header_substrs.iter().zip(self.header_starts.iter()).enumerate() {
-                for (j, byte) in substr.as_bytes().iter().enumerate() {
-                    expected_masked_chars[*start_idx + j] = *byte;
-                    expected_substr_ids[*start_idx + j] = idx as u8 + 1;
-                }
-            }
+            // for (idx, (substr, start_idx)) in self.header_substrs.iter().zip(self.header_starts.iter()).enumerate() {
+            //     for (j, byte) in substr.as_bytes().iter().enumerate() {
+            //         expected_masked_chars[*start_idx + j] = *byte;
+            //         expected_substr_ids[*start_idx + j] = idx as u8 + 1;
+            //     }
+            // }
             rlc_inputs.append(&mut expected_masked_chars);
             rlc_inputs.append(&mut expected_substr_ids);
         }
@@ -205,12 +186,12 @@ impl DefaultEmailVerifyPublicInput {
             let max_byte_size = config_params.body_config.as_ref().unwrap().max_variable_byte_size;
             let mut expected_masked_chars = vec![0u8; max_byte_size];
             let mut expected_substr_ids = vec![0u8; max_byte_size];
-            for (idx, (substr, start_idx)) in self.body_substrs.iter().zip(self.body_starts.iter()).enumerate() {
-                for (j, byte) in substr.as_bytes().iter().enumerate() {
-                    expected_masked_chars[*start_idx + j] = *byte;
-                    expected_substr_ids[*start_idx + j] = idx as u8 + 1;
-                }
-            }
+            // for (idx, (substr, start_idx)) in self.body_substrs.iter().zip(self.body_starts.iter()).enumerate() {
+            //     for (j, byte) in substr.as_bytes().iter().enumerate() {
+            //         expected_masked_chars[*start_idx + j] = *byte;
+            //         expected_substr_ids[*start_idx + j] = idx as u8 + 1;
+            //     }
+            // }
             rlc_inputs.append(&mut expected_masked_chars);
             rlc_inputs.append(&mut expected_substr_ids);
         }
@@ -274,9 +255,8 @@ impl<F: PrimeField> Circuit<F> for DefaultCommitVerifyCircuit<F> {
     fn synthesize(&self, mut config: Self::Config, mut layouter: impl Layouter<F>) -> Result<(), Error> {
         config.sha256_config.range().load_lookup_table(&mut layouter)?;
         config.sha256_config.load(&mut layouter)?;
-        // config.header_config.load(&mut layouter)?;
         config.body_config.load(&mut layouter)?;
-        let mut first_pass = SKIP_FIRST_PASS;
+        // let mut first_pass = SKIP_FIRST_PASS;
         let mut public_hash_cell = vec![];
         let params = default_config_params();
         if let Some(sign_config) = params.sign_verify_config.as_ref() {
@@ -289,81 +269,40 @@ impl<F: PrimeField> Circuit<F> for DefaultCommitVerifyCircuit<F> {
         layouter.assign_region(
             || "zkcommit",
             |region| {
-                // if first_pass {
-                //     first_pass = false;
-                //     return Ok(());
-                // }
-                // let ctx = &mut config.sha256_config.new_context(region);
-                // let header_params = params.header_config.as_ref().expect("header_config is required");
+                let ctx = &mut config.sha256_config.new_context(region);
+                let range = config.sha256_config.range().clone();
+                let gate = range.gate.clone();
 
-                // let range = config.sha256_config.range().clone();
-                // let gate = range.gate.clone();
+                // 1. Compute the SHA-256 hash of the payload
+                let payload_hash_result = config.sha256_config.digest(ctx, &self.payload_bytes, Some(self.payload_bytes.len()))?;
+                // Extract the assigned values from the hash result
+                let payload_hash_values: Vec<halo2_base::AssignedValue<F>> = payload_hash_result.output_bytes.to_vec();
 
-                // // 1. Extract sub strings in the body and compute the base64 encoded hash of the body.
-                // let body_result = config.body_config.match_hash_and_base64(ctx, &mut config.sha256_config, &body_bytes)?;
+                // 2. Verify the RSA signature
+                let e = RSAPubE::Fix(BigUint::from(Self::DEFAULT_E));
+                let public_key = RSAPublicKey::<F>::new(Value::known(self.public_key_n.clone()), e);
+                let signature = RSASignature::<F>::new(Value::known(BigUint::from_bytes_be(&self.signature_bytes)));
+                let (assigned_public_key, assigned_signature) = config.sign_verify_config.verify_signature(ctx, &payload_hash_values, public_key, signature.clone())?;
 
-                // // 2. Extract sub strings in the header, which includes the body hash, and compute the raw hash of the header.
-                // let header_result = config.header_config.match_and_hash(ctx, &mut config.sha256_config, &header_bytes)?;
+                // 3. Compute public input values
+                let poseidon = PoseidonChipBn254_8_58::new(ctx, &gate);
+                let sign_commit = poseidon.hash_elements(ctx, &gate, &assigned_signature.c.limbs()).unwrap().0[0].clone();
+                let public_key_n_hash = poseidon.hash_elements(ctx, &gate, &assigned_public_key.n.limbs()).unwrap().0[0].clone();
 
-                // // 3. Verify the rsa signature.
-                // let e = RSAPubE::Fix(BigUint::from(Self::DEFAULT_E));
-                // let public_key = RSAPublicKey::<F>::new(Value::known(self.public_key_n.clone()), e);
-                // let signature = RSASignature::<F>::new(Value::known(BigUint::from_bytes_be(&signature_bytes)));
-                // let (assigned_public_key, assigned_signature) = config.sign_verify_config.verify_signature(ctx, &header_result.hash_bytes, public_key, signature.clone())?;
+                public_hash_cell.push(sign_commit.cell());
+                public_hash_cell.push(public_key_n_hash.cell());
 
-                // // 4. Assert that the bodyhash is included in the email header.
-                // let (extracted_bodyhash, is_target_vec) = config
-                //     .chars_shift_config
-                //     .shift(ctx, &gate, &header_result.regex.masked_characters, &header_result.regex.all_substr_ids);
-                // // for (val, id) in header_result.regex.masked_characters.iter().zip(header_result.regex.all_substr_ids.iter()) {
-                // //     println!("val {:?} id {:?}", val, id);
-                // // }
-                // for (a, b) in extracted_bodyhash.iter().zip(body_result.encoded_hash.iter()) {
-                //     gate.assert_equal(ctx, QuantumCell::Existing(a), QuantumCell::Existing(b));
-                // }
+                // 4. Compute RLC of payload bytes
+                let mut rlc = gate.load_zero(ctx);
+                let mut coeff = sign_commit.clone();
+                for byte in self.payload_bytes.iter() {
+                    let byte_cell = gate.load_constant(ctx, F::from(*byte as u64));
+                    rlc = gate.mul_add(ctx, QuantumCell::Existing(&byte_cell), QuantumCell::Existing(&coeff), QuantumCell::Existing(&rlc));
+                    coeff = gate.mul(ctx, QuantumCell::Existing(&sign_commit), QuantumCell::Existing(&coeff));
+                }
+                public_hash_cell.push(rlc.cell());
 
-                // // 5. Compute public input values.
-                // let poseidon = PoseidonChipBn254_8_58::new(ctx, &gate);
-                // let sign_commit = poseidon.hash_elements(ctx, &gate, &assigned_signature.c.limbs()).unwrap().0[0].clone();
-                // // let header_hash_commit = assigned_commit_wtns_bytes(ctx, &gate, &poseidon, &sign_rand, &header_result.hash_bytes);
-                // let public_key_n_hash = poseidon.hash_elements(ctx, &gate, &assigned_public_key.n.limbs()).unwrap().0[0].clone();
-                // public_hash_cell.push(sign_commit.cell());
-                // public_hash_cell.push(public_key_n_hash.cell());
-                // let mut rlc_inputs = vec![];
-                // let mut bodyhash_masked_header_chars = vec![];
-                // let mut bodyhash_masked_header_substr_ids = vec![];
-                // for idx in 0..header_params.max_variable_byte_size {
-                //     let is_target = &is_target_vec[idx];
-                //     bodyhash_masked_header_chars.push(gate.select(
-                //         ctx,
-                //         QuantumCell::Constant(F::zero()),
-                //         QuantumCell::Existing(&header_result.regex.masked_characters[idx]),
-                //         QuantumCell::Existing(is_target),
-                //     ));
-                //     bodyhash_masked_header_substr_ids.push(gate.select(
-                //         ctx,
-                //         QuantumCell::Constant(F::zero()),
-                //         QuantumCell::Existing(&header_result.regex.all_substr_ids[idx]),
-                //         QuantumCell::Existing(is_target),
-                //     ));
-                // }
-                // // println!("bodyhash_masked_header_chars {:?}", bodyhash_masked_header_chars);
-                // // for (idx, val) in bodyhash_masked_header_chars.iter().enumerate() {
-                // //     println!("idx {} val {:?}", idx, val.value().map(|v| v.get_lower_32() as u8 as char));
-                // // }
-                // rlc_inputs.append(&mut bodyhash_masked_header_chars);
-                // rlc_inputs.append(&mut bodyhash_masked_header_substr_ids);
-                // rlc_inputs.append(&mut body_result.regex.masked_characters.clone());
-                // rlc_inputs.append(&mut body_result.regex.all_substr_ids.clone());
-                // let mut rlc = gate.load_zero(ctx);
-                // let mut coeff = sign_commit.clone();
-                // for input in rlc_inputs.into_iter() {
-                //     rlc = gate.mul_add(ctx, QuantumCell::Existing(&input), QuantumCell::Existing(&coeff), QuantumCell::Existing(&rlc));
-                //     coeff = gate.mul(ctx, QuantumCell::Existing(&sign_commit), QuantumCell::Existing(&coeff));
-                // }
-                // public_hash_cell.push(rlc.cell());
-
-                // range.finalize(ctx);
+                range.finalize(ctx);
                 Ok(())
             },
         )?;
@@ -423,17 +362,12 @@ impl<F: PrimeField> DefaultCommitVerifyCircuit<F> {
         // Extract signature and payload from the commit
         let signature_pem = commit.commit.verification.signature;
         let payload = commit.commit.verification.payload;
-        println!("signature_pem {:?}", signature_pem);
 
         let ssh_sig = SshSig::from_pem(signature_pem).unwrap();
         let signature_bytes = ssh_sig.signature_bytes().to_vec();
 
-        println!("signature_bytes {:?}", signature_bytes);
-
         // Convert payload to bytes
         let payload_bytes = payload.into_bytes();
-
-        println!("payload_bytes {:?}", payload_bytes);
 
         let mut public_key_file = File::open(public_key_path).unwrap();
         let mut public_key_contents = String::new();
@@ -446,27 +380,28 @@ impl<F: PrimeField> DefaultCommitVerifyCircuit<F> {
         circuit
     }
 
-    /// Compute public input values as [`DefaultEmailVerifyPublicInput`] from the circuit.
-    pub fn gen_default_public_input(&self) -> DefaultEmailVerifyPublicInput {
-        let (header_bytes, body_bytes, signature_bytes) = canonicalize_signed_email(&self.payload_bytes).unwrap();
-        let signature = BigUint::from_bytes_be(&signature_bytes);
+    /// Compute public input values as [`DefaultCommitVerifyPublicInput`] from the circuit.
+    pub fn gen_default_public_input(&self) -> DefaultCommitVerifyPublicInput {
+        let signature = BigUint::from_bytes_be(&self.signature_bytes);
         let config_params = default_config_params();
         let num_limbs = config_params.sign_verify_config.as_ref().unwrap().public_key_bits / LIMB_BITS;
         let sign_commit: F = {
             let limbs = decompose_biguint(&signature, num_limbs, LIMB_BITS);
             poseidon_hash_fields(&limbs)
         };
-        // let header_hash_commit = value_commit_wtns_bytes(&sign_rand, &header_hash);
         let public_key_hash = {
             let limbs = decompose_biguint(&self.public_key_n, num_limbs, LIMB_BITS);
             poseidon_hash_fields(&limbs)
         };
-        let header_params: &HeaderConfigParams = config_params.header_config.as_ref().unwrap();
-        let body_params = config_params.body_config.as_ref().unwrap();
-        let header_str = String::from_utf8(header_bytes[header_params.skip_prefix_bytes_size.unwrap_or(0)..].to_vec()).unwrap();
-        let body_str = String::from_utf8(body_bytes[body_params.skip_prefix_bytes_size.unwrap_or(0)..].to_vec()).unwrap();
-        let (header_substrs, body_substrs) = get_email_substrs(&header_str, &body_str, header_params.substr_regexes.clone(), body_params.substr_regexes.clone());
-        DefaultEmailVerifyPublicInput::new(sign_commit, public_key_hash, header_substrs, body_substrs)
+        let payload_params = config_params.body_config.as_ref().unwrap();
+        let payload_str = String::from_utf8(self.payload_bytes.clone()).unwrap();
+        println!("payload_params {:?}", payload_params);
+        println!("payload_str {:?}", payload_str);
+
+        let payload_substrs = get_payload_substrs(&payload_str, &payload_params.substr_regexes);
+        println!("payload_substrs {:?}", payload_substrs);
+
+        DefaultCommitVerifyPublicInput::new(sign_commit, public_key_hash, payload_substrs)
     }
 
     #[cfg(not(target_arch = "wasm32"))]

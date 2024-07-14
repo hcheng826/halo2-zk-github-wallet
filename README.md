@@ -2,6 +2,10 @@
 
 This repo is a for EF PSE acceleration-program: https://github.com/privacy-scaling-explorations/acceleration-program/issues/43
 
+Set up for GitHub
+- set up GPG and commit signing: https://docs.github.com/en/authentication/managing-commit-signature-verification/about-commit-signature-verification#about-commit-signature-verification
+- getting commit info and signature: 
+
 **Email verification circuit in halo2.**
 
 ## Disclaimer

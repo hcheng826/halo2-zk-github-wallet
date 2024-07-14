@@ -265,7 +265,7 @@ pub fn verify_email_proof(params: JsValue, vk: JsValue, proof: JsValue, public_i
         .map_err(|err| JsValue::from_str(&err.to_string()))?;
     log_1(&JsValue::from_str("vk read"));
 
-    let public_input: DefaultEmailVerifyPublicInput = serde_wasm_bindgen::from_value(public_input)?;
+    let public_input: DefaultCommitVerifyPublicInput = serde_wasm_bindgen::from_value(public_input)?;
     let proof = proof.as_string().unwrap();
     let proof = hex::decode(&proof[2..]).map_err(|err| JsValue::from_str(&err.to_string()))?;
 

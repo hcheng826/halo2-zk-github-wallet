@@ -56,6 +56,25 @@ pub fn get_email_substrs(
     (header_substrs, body_substrs)
 }
 
+/// Extract substrings and their start positions from the given payload string.
+///
+/// # Arguments
+/// * `payload_str` - The payload string.
+/// * `substr_regexes` - A list of the substring regexes for the payload string.
+/// # Return values
+/// Return a tuple of the extracted substrings and their start positions.
+pub fn get_payload_substrs(payload_str: &str, substr_regexes: &Vec<Vec<String>>) -> Vec<Option<(usize, String)>> {
+    let payload_substrs = substr_regexes
+        .iter()
+        .map(|raws| {
+            let raws = raws.iter().map(|raw| format!(r"{}", raw)).collect_vec();
+            get_substr(payload_str, raws.as_slice())
+        })
+        .collect_vec();
+
+    payload_substrs
+}
+
 /// Extract a substring and its start position from the given input string.
 ///
 /// # Arguments

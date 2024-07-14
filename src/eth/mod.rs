@@ -87,7 +87,7 @@ pub async fn setup_eth_client(anvil: &AnvilInstance) -> EthersClient {
     client
 }
 
-pub async fn deploy_and_call_verifiers(sols_dir: &PathBuf, runs: Option<usize>, proof: &[u8], instance: &DefaultEmailVerifyPublicInput, gas_limit: u64) {
+pub async fn deploy_and_call_verifiers(sols_dir: &PathBuf, runs: Option<usize>, proof: &[u8], instance: &DefaultCommitVerifyPublicInput, gas_limit: u64) {
     let anvil = setup_eth_backend(gas_limit).await;
     let client = setup_eth_client(&anvil).await;
     let runs = runs.unwrap_or(1);
@@ -118,10 +118,10 @@ pub async fn deploy_and_call_verifiers(sols_dir: &PathBuf, runs: Option<usize>, 
     let instance = encode(&[
         Token::Uint(U256::from_str_radix(&instance.sign_commit, 10).unwrap()),
         Token::Uint(U256::from_str_radix(&instance.public_key_hash, 10).unwrap()),
-        Token::Array(instance.header_substrs.iter().map(|s| Token::String(s.clone())).collect_vec()),
-        Token::Array(instance.header_starts.iter().map(|idx| Token::Uint(U256::from(idx.clone()))).collect_vec()),
-        Token::Array(instance.body_substrs.iter().map(|s| Token::String(s.clone())).collect_vec()),
-        Token::Array(instance.body_starts.iter().map(|idx| Token::Uint(U256::from(idx.clone()))).collect_vec()),
+        // Token::Array(instance.header_substrs.iter().map(|s| Token::String(s.clone())).collect_vec()),
+        // Token::Array(instance.header_starts.iter().map(|idx| Token::Uint(U256::from(idx.clone()))).collect_vec()),
+        // Token::Array(instance.body_substrs.iter().map(|s| Token::String(s.clone())).collect_vec()),
+        // Token::Array(instance.body_starts.iter().map(|idx| Token::Uint(U256::from(idx.clone()))).collect_vec()),
     ]);
     let proof = Bytes::from(proof.to_vec());
     verifier.verify_email(Bytes::from(instance.clone()), proof.clone()).call().await.unwrap();
