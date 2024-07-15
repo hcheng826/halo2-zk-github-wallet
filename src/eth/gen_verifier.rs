@@ -35,8 +35,8 @@ pub fn gen_sol_verifiers(params: &ParamsKZG<Bn256>, vk: &VerifyingKey<G1Affine>,
         let mut json_file = File::create(sols_dir.join("deploy_params.json")).unwrap();
         json_file.write_all(serde_json::to_string_pretty(&deploy_params).unwrap().as_bytes()).unwrap();
     }
-    let email_verifier_sol = include_str!("./EmailVerifier.sol");
-    fs::write(sols_dir.join("EmailVerifier.sol"), email_verifier_sol).unwrap();
+    let commit_verifier_sol = include_str!("./CommitVerifier.sol");
+    fs::write(sols_dir.join("CommitVerifier.sol"), commit_verifier_sol).unwrap();
     let mut verifier_base_sol = include_str!("./VerifierBase.sol").to_string();
     verifier_base_sol = verifier_base_sol.replace("<%max_transcript_addr%>", &format!("{}", max_transcript_addr));
     fs::write(sols_dir.join("VerifierBase.sol"), verifier_base_sol).unwrap();

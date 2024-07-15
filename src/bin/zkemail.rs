@@ -186,6 +186,7 @@ async fn main() {
             pk_path,
             vk_path,
         } => {
+            set_var("COMMIT_VERIFY_CONFIG", &circuit_config_path);
             let circuit = DefaultCommitVerifyCircuit::<Fr>::gen_circuit_from_commit_path(&commit_path, &public_key_path).await;
             gen_keys(&params_path, &circuit_config_path, &pk_path, &vk_path, circuit).expect("key generation failed");
         }
@@ -198,7 +199,7 @@ async fn main() {
             public_input_path,
             public_key_path,
         } => {
-            set_var(EMAIL_VERIFY_CONFIG_ENV, &circuit_config_path);
+            set_var(COMMIT_VERIFY_CONFIG_ENV, &circuit_config_path);
             let circuit = DefaultCommitVerifyCircuit::<Fr>::gen_circuit_from_commit_path(&commit_path, &public_key_path).await;
             let public_input = circuit.gen_default_public_input();
             prove(&params_path, &circuit_config_path, &pk_path, &proof_path, circuit).unwrap();
@@ -213,9 +214,8 @@ async fn main() {
             public_input_path,
             public_key_path,
         } => {
-            set_var(EMAIL_VERIFY_CONFIG_ENV, &circuit_config_path);
+            set_var(COMMIT_VERIFY_CONFIG_ENV, &circuit_config_path);
             let circuit = DefaultCommitVerifyCircuit::<Fr>::gen_circuit_from_commit_path(&commit_path, &public_key_path).await;
-            println!("circuit: {:?}", circuit);
             let public_input = circuit.gen_default_public_input();
             println!("public_input: {:?}", public_input);
             evm_prove(&params_path, &circuit_config_path, &pk_path, &proof_path, circuit).unwrap();

@@ -62,7 +62,7 @@ pub fn init_panic_hook() {
 /// Initialize the configurations for [`DefaultCommitVerifyCircuit`].
 /// You must call this function once before calling any other functions in this module.
 /// # Arguments
-/// * `config_params` - a json string of [`EmailVerifyConfigParams`].
+/// * `config_params` - a json string of [`CommitVerifyConfigParams`].
 /// * `bodyhash_allstr_def` - a string of [`AllstrRegexDef`] for the bodyhash.
 /// * `bodyhash_substr_def` - a string of [`SubstrRegexDef`] for the bodyhash.
 /// * `header_allstr_defs` - a list of strings of [`AllstrRegexDef`] for the headers.
@@ -84,7 +84,7 @@ pub fn init_configs(
     console_error_panic_hook::set_once();
     log::set_logger(&DEFAULT_LOGGER).unwrap();
     log::set_max_level(log::LevelFilter::Info);
-    let config_params: EmailVerifyConfigParams = serde_json::from_str(&config_params).map_err(|err| JsValue::from_str(&err.to_string()))?;
+    let config_params: CommitVerifyConfigParams = serde_json::from_str(&config_params).map_err(|err| JsValue::from_str(&err.to_string()))?;
     log_1(&JsValue::from_str(&format!("bodyhash_allstr_def: {}", bodyhash_allstr_def)));
     let bodyhash_allstr_def: AllstrRegexDef = {
         let mut bytes = bodyhash_allstr_def.as_bytes();

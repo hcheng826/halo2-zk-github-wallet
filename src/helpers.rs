@@ -5,7 +5,7 @@ use crate::{default_config_params, DefaultCommitVerifyPublicInput};
 // use crate::eth::{gen_evm_verifier_sols, gen_evm_verifier_yul};
 use crate::utils::get_payload_substrs;
 use crate::vrm::DecomposedRegexConfig;
-use crate::EMAIL_VERIFY_CONFIG_ENV;
+use crate::COMMIT_VERIFY_CONFIG_ENV;
 use ark_std::{end_timer, start_timer};
 use cfdkim::{canonicalize_signed_email, resolve_public_key};
 use ethereum_types::Address;
@@ -94,7 +94,7 @@ pub fn downsize_params(original_params_path: &str, new_params_path: &str, k: u32
 /// * `vk_path` - a file path of the output verifying key.
 /// * `circuit` - an email verification circuit.
 pub fn gen_keys<C: CircuitExt<Fr>>(params_path: &str, circuit_config_path: &str, pk_path: &str, vk_path: &str, circuit: C) -> Result<(), Error> {
-    set_var(EMAIL_VERIFY_CONFIG_ENV, circuit_config_path);
+    set_var(COMMIT_VERIFY_CONFIG_ENV, circuit_config_path);
 
     let mut params = {
         let f = File::open(Path::new(params_path)).unwrap();
@@ -145,7 +145,7 @@ pub fn gen_keys<C: CircuitExt<Fr>>(params_path: &str, circuit_config_path: &str,
 //     agg_vk_path: &str,
 //     app_circuit: C,
 // ) -> Result<(), Error> {
-//     set_var(EMAIL_VERIFY_CONFIG_ENV, app_circuit_config_path);
+//     set_var(COMMIT_VERIFY_CONFIG_ENV, app_circuit_config_path);
 //     set_var(VERIFY_CONFIG_KEY, agg_circuit_config_path);
 //     let agg_params = {
 //         let f = File::open(Path::new(agg_params_path)).unwrap();
@@ -193,7 +193,7 @@ pub fn gen_keys<C: CircuitExt<Fr>>(params_path: &str, circuit_config_path: &str,
 /// * `proof_path` - a file path of the output proof.
 /// * `circuit` - an email verification circuit.
 pub fn prove<C: CircuitExt<Fr>>(params_path: &str, circuit_config_path: &str, pk_path: &str, proof_path: &str, circuit: C) -> Result<(), Error> {
-    set_var(EMAIL_VERIFY_CONFIG_ENV, circuit_config_path);
+    set_var(COMMIT_VERIFY_CONFIG_ENV, circuit_config_path);
     let mut params = {
         let f = File::open(Path::new(params_path)).unwrap();
         let mut reader = BufReader::new(f);
@@ -259,7 +259,7 @@ pub fn verify_wasm<C: CircuitExt<Fr>>(params_path: &str, circuit_config_path: &s
 }
 
 fn verify_util<C: CircuitExt<Fr>>(params_path: &str, circuit_config_path: &str, vk_path: &str, proof: Vec<u8>, public_input_path: &str) -> Result<bool, Error> {
-    set_var(EMAIL_VERIFY_CONFIG_ENV, circuit_config_path);
+    set_var(COMMIT_VERIFY_CONFIG_ENV, circuit_config_path);
     let params = {
         let f = File::open(Path::new(params_path)).unwrap();
         let mut reader = BufReader::new(f);
@@ -294,7 +294,7 @@ fn verify_util<C: CircuitExt<Fr>>(params_path: &str, circuit_config_path: &str, 
 /// * `proof_path` - a file path of the output proof.
 /// * `circuit` - an email verification circuit.
 pub fn evm_prove<C: CircuitExt<Fr>>(params_path: &str, circuit_config_path: &str, pk_path: &str, proof_path: &str, circuit: C) -> Result<(), Error> {
-    set_var(EMAIL_VERIFY_CONFIG_ENV, circuit_config_path);
+    set_var(COMMIT_VERIFY_CONFIG_ENV, circuit_config_path);
     let mut params = {
         let f = File::open(Path::new(params_path)).unwrap();
         let mut reader = BufReader::new(f);
@@ -351,7 +351,7 @@ pub fn evm_prove<C: CircuitExt<Fr>>(params_path: &str, circuit_config_path: &str
 //     app_circuit: C,
 //     // public_input_path: &str,
 // ) -> Result<(), Error> {
-//     set_var(EMAIL_VERIFY_CONFIG_ENV, app_circuit_config_path);
+//     set_var(COMMIT_VERIFY_CONFIG_ENV, app_circuit_config_path);
 //     set_var(VERIFY_CONFIG_KEY, agg_circuit_config_path);
 //     let agg_params = {
 //         let f = File::open(Path::new(agg_params_path)).unwrap();
@@ -413,7 +413,7 @@ pub fn gen_evm_verifier<C: CircuitExt<Fr>>(
     sols_dir: &str,
     max_line_size_per_file: Option<usize>,
 ) -> Result<(), Error> {
-    set_var(EMAIL_VERIFY_CONFIG_ENV, circuit_config_path);
+    set_var(COMMIT_VERIFY_CONFIG_ENV, circuit_config_path);
     let mut params = {
         let f = File::open(Path::new(params_path)).unwrap();
         let mut reader = BufReader::new(f);
@@ -453,7 +453,7 @@ pub fn gen_evm_verifier<C: CircuitExt<Fr>>(
 //     bytecode_path: &str,
 //     solidity_path: &str,
 // ) -> Result<(), Error> {
-//     set_var(EMAIL_VERIFY_CONFIG_ENV, app_circuit_config_path);
+//     set_var(COMMIT_VERIFY_CONFIG_ENV, app_circuit_config_path);
 //     set_var(VERIFY_CONFIG_KEY, agg_circuit_config_path);
 //     let params = {
 //         let f = File::open(Path::new(agg_params_path)).unwrap();
@@ -504,7 +504,7 @@ pub fn gen_evm_verifier<C: CircuitExt<Fr>>(
 /// The contract size limitation is disabled in this function.
 /// Therefore, your verifier contract may violate that limitation even if it passes the verification here.
 pub async fn evm_verify(circuit_config_path: &str, sols_dir: &str, proof_path: &str, public_input_path: &str, gas_limit: Option<u64>) -> Result<(), Error> {
-    set_var(EMAIL_VERIFY_CONFIG_ENV, circuit_config_path);
+    set_var(COMMIT_VERIFY_CONFIG_ENV, circuit_config_path);
     let proof = {
         let mut f = File::open(&proof_path).unwrap();
         let mut buf = Vec::new();
@@ -532,7 +532,7 @@ pub async fn evm_verify(circuit_config_path: &str, sols_dir: &str, proof_path: &
 // /// The contract size limitation is disabled in this function.
 // /// Therefore, your verifier contract may violate that limitation even if it passes the verification here.
 // pub fn evm_verify_agg(app_circuit_config_path: &str, agg_circuit_config_path: &str, bytecode_path: &str, proof_path: &str, instances: Vec<Fr>) -> Result<(), Error> {
-//     set_var(EMAIL_VERIFY_CONFIG_ENV, app_circuit_config_path);
+//     set_var(COMMIT_VERIFY_CONFIG_ENV, app_circuit_config_path);
 //     set_var(VERIFY_CONFIG_KEY, agg_circuit_config_path);
 //     let deployment_code = {
 //         let f = File::open(bytecode_path).unwrap();
@@ -627,7 +627,7 @@ mod test {
     //     let proof_path = "./build/test.proof";
     //     let evm_proof_path = "./build/test_evm.proof";
     //     let sols_dir = "./build/test_sols";
-    //     temp_env::with_var(EMAIL_VERIFY_CONFIG_ENV, Some(circuit_config_path), move || {
+    //     temp_env::with_var(COMMIT_VERIFY_CONFIG_ENV, Some(circuit_config_path), move || {
     //         let config_params = default_config_params();
     //         // let (header_: &crate::BodyConfigParamssubstrs, body_substrs) = get_email_substrs(&header_str, &body_str, header_config.substr_regexes.clone(), body_config.substr_regexes.clone());
     //         let circuit = DefaultCommitVerifyCircuit::new(email_bytes.clone(), public_key_n.clone());
@@ -674,7 +674,7 @@ mod test {
     //     let header_str = String::from_utf8(canonicalized_header.clone()).unwrap();
     //     let body_str = String::from_utf8(canonicalized_body.clone()).unwrap();
     //     let app_config_path = "./configs/app_recursion_bench.config";
-    //     temp_env::with_var(EMAIL_VERIFY_CONFIG_ENV, Some(app_config_path), move || {
+    //     temp_env::with_var(COMMIT_VERIFY_CONFIG_ENV, Some(app_config_path), move || {
     //         let app_config_params = read_default_circuit_config_params();
     //         let header_config = app_config_params.header_config.expect("header_config is required");
     //         let body_config = app_config_params.body_config.expect("body_config is required");

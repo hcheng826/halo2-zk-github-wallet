@@ -53,7 +53,7 @@ use ethers::{
     prelude::{abigen, LocalWallet, Wallet},
     utils::{Anvil, AnvilInstance},
 };
-abigen!(EmailVerifier, "./src/eth/EmailVerifier.abi");
+abigen!(CommitVerifier, "./src/eth/CommitVerifier.abi");
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct DeployParamsJson {
@@ -96,39 +96,31 @@ pub async fn deploy_and_call_verifiers(sols_dir: &PathBuf, runs: Option<usize>, 
     let (base_addr, gas) = deploy_verifier_base_and_funcs(&client, sols_dir, runs).await;
     gas_sum += gas;
 
-    let max_header_bytes = config_params.header_config.as_ref().unwrap().max_variable_byte_size;
-    let max_body_bytes = config_params.body_config.as_ref().unwrap().max_variable_byte_size;
-    let (email_verifier, gas) = deploy_verifier_via_solidity(
+    let max_payload_bytes = config_params.payload_config.as_ref().unwrap().max_variable_byte_size;
+    let (commit_verifier, gas) = deploy_verifier_via_solidity(
         &client,
-        sols_dir.join("EmailVerifier.sol"),
-        "EmailVerifier",
-        (
-            Token::Address(base_addr),
-            Token::Uint(U256::from(max_header_bytes)),
-            Token::Uint(U256::from(max_body_bytes)),
-        ),
+        sols_dir.join("CommitVerifier.sol"),
+        "CommitVerifier",
+        (Token::Address(base_addr), Token::Uint(U256::from(max_payload_bytes))),
         Some(runs),
     )
     .await;
     gas_sum += gas;
     println!("total deploy gas {}", gas_sum);
-    println!("address {:?}", Address::from(email_verifier));
+    println!("address {:?}", Address::from(commit_verifier));
 
-    let verifier = EmailVerifier::new(email_verifier, client.clone());
+    let verifier = CommitVerifier::new(commit_verifier, client.clone());
     let instance = encode(&[
         Token::Uint(U256::from_str_radix(&instance.sign_commit, 10).unwrap()),
         Token::Uint(U256::from_str_radix(&instance.public_key_hash, 10).unwrap()),
-        // Token::Array(instance.header_substrs.iter().map(|s| Token::String(s.clone())).collect_vec()),
-        // Token::Array(instance.header_starts.iter().map(|idx| Token::Uint(U256::from(idx.clone()))).collect_vec()),
-        // Token::Array(instance.body_substrs.iter().map(|s| Token::String(s.clone())).collect_vec()),
-        // Token::Array(instance.body_starts.iter().map(|idx| Token::Uint(U256::from(idx.clone()))).collect_vec()),
+        Token::Array(instance.payload_substrs.iter().map(|s| Token::String(s.clone())).collect_vec()),
+        Token::Array(instance.payload_starts.iter().map(|idx| Token::Uint(U256::from(idx.clone()))).collect_vec()),
     ]);
     let proof = Bytes::from(proof.to_vec());
-    verifier.verify_email(Bytes::from(instance.clone()), proof.clone()).call().await.unwrap();
+    verifier.verify_commit(Bytes::from(instance.clone()), proof.clone()).call().await.unwrap();
     println!("verification passed");
-    let call = verifier.method::<_, ()>("verifyEmail", (Bytes::from(instance.clone()), proof.clone())).unwrap();
+    let call = verifier.method::<_, ()>("verifyCommit", (Bytes::from(instance.clone()), proof.clone())).unwrap();
     println!("estimated gas {:?}", call.estimate_gas().await.unwrap());
-    // drop(anvil);
 }
 
 async fn deploy_verifier_base_and_funcs(client: &EthersClient, sols_dir: &PathBuf, runs: usize) -> (Address, U256) {

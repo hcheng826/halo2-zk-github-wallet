@@ -25,7 +25,7 @@ use halo2_base::{gates::range::RangeStrategy::Vertical, SKIP_FIRST_PASS};
 use halo2_regex::defs::{AllstrRegexDef, SubstrRegexDef};
 use halo2_regex::vrm::DecomposedRegexConfig;
 use halo2_rsa::{RSAPubE, RSAPublicKey, RSASignature};
-use halo2_zk_email::{default_config_params, DefaultCommitVerifyCircuit, EMAIL_VERIFY_CONFIG_ENV};
+use halo2_zk_email::{default_config_params, DefaultCommitVerifyCircuit, COMMIT_VERIFY_CONFIG_ENV};
 use itertools::Itertools;
 use mailparse::parse_mail;
 use num_bigint::BigUint;
@@ -62,7 +62,7 @@ fn gen_or_get_params(k: usize) -> ParamsKZG<Bn256> {
 fn bench_email_verify1(c: &mut Criterion) {
     let mut group = c.benchmark_group("email bench1 without recursion");
     group.sample_size(10);
-    set_var(EMAIL_VERIFY_CONFIG_ENV, "./configs/app_bench.config");
+    set_var(COMMIT_VERIFY_CONFIG_ENV, "./configs/app_bench.config");
     let config_params = default_config_params();
     let params = gen_or_get_params(config_params.degree as usize);
     println!("gen_params");

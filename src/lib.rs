@@ -88,7 +88,7 @@ use ssh_key::SshSig;
 use std::io::{Read, Write};
 
 /// The name of env variable for the path to the email configuration json.
-pub const EMAIL_VERIFY_CONFIG_ENV: &'static str = "EMAIL_VERIFY_CONFIG";
+pub const COMMIT_VERIFY_CONFIG_ENV: &'static str = "EMAIL_VERIFY_CONFIG";
 
 /// Public input definition of [`DefaultCommitVerifyCircuit`].
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -169,38 +169,32 @@ impl DefaultCommitVerifyPublicInput {
         let public_key_hash = F::from_str_vartime(&self.public_key_hash).unwrap();
         let mut rlc_inputs = vec![];
         let config_params = default_config_params();
+
         {
-            let max_byte_size = config_params.header_config.as_ref().unwrap().max_variable_byte_size;
+            let max_byte_size = config_params.payload_config.as_ref().unwrap().max_variable_byte_size;
             let mut expected_masked_chars = vec![0u8; max_byte_size];
             let mut expected_substr_ids = vec![0u8; max_byte_size];
-            // for (idx, (substr, start_idx)) in self.header_substrs.iter().zip(self.header_starts.iter()).enumerate() {
-            //     for (j, byte) in substr.as_bytes().iter().enumerate() {
-            //         expected_masked_chars[*start_idx + j] = *byte;
-            //         expected_substr_ids[*start_idx + j] = idx as u8 + 1;
-            //     }
-            // }
+
+            for (idx, (substr, start_idx)) in self.payload_substrs.iter().zip(self.payload_starts.iter()).enumerate() {
+                for (j, byte) in substr.as_bytes().iter().enumerate() {
+                    if *start_idx + j < max_byte_size {
+                        expected_masked_chars[*start_idx + j] = *byte;
+                        expected_substr_ids[*start_idx + j] = idx as u8 + 1;
+                    }
+                }
+            }
+
             rlc_inputs.append(&mut expected_masked_chars);
             rlc_inputs.append(&mut expected_substr_ids);
         }
-        {
-            let max_byte_size = config_params.body_config.as_ref().unwrap().max_variable_byte_size;
-            let mut expected_masked_chars = vec![0u8; max_byte_size];
-            let mut expected_substr_ids = vec![0u8; max_byte_size];
-            // for (idx, (substr, start_idx)) in self.body_substrs.iter().zip(self.body_starts.iter()).enumerate() {
-            //     for (j, byte) in substr.as_bytes().iter().enumerate() {
-            //         expected_masked_chars[*start_idx + j] = *byte;
-            //         expected_substr_ids[*start_idx + j] = idx as u8 + 1;
-            //     }
-            // }
-            rlc_inputs.append(&mut expected_masked_chars);
-            rlc_inputs.append(&mut expected_substr_ids);
-        }
+
         let mut rlc = F::zero();
         let mut coeff = sign_commit.clone();
         for input in rlc_inputs.into_iter() {
             rlc += coeff * F::from(input as u64);
             coeff *= sign_commit.clone();
         }
+
         println!("rlc instance {:?}", rlc);
         vec![sign_commit, public_key_hash, rlc]
     }
@@ -211,9 +205,7 @@ impl DefaultCommitVerifyPublicInput {
 pub struct DefaultCommitVerifyConfig<F: PrimeField> {
     pub sha256_config: Sha256DynamicConfig<F>,
     pub sign_verify_config: SignVerifyConfig<F>,
-    pub header_config: RegexSha2Config<F>,
-    pub body_config: RegexSha2Base64Config<F>,
-    pub chars_shift_config: CharsShiftConfig<F>,
+    pub payload_config: RegexSha2Config<F>,
     /// An instance column that contains a commitment of the email header, a hash of the public key `n` parameter, and a random linear combination of the masked characters and their substring ids in the email header and body.
     pub instances: Column<Instance>,
 }
@@ -255,7 +247,7 @@ impl<F: PrimeField> Circuit<F> for DefaultCommitVerifyCircuit<F> {
     fn synthesize(&self, mut config: Self::Config, mut layouter: impl Layouter<F>) -> Result<(), Error> {
         config.sha256_config.range().load_lookup_table(&mut layouter)?;
         config.sha256_config.load(&mut layouter)?;
-        config.body_config.load(&mut layouter)?;
+        config.payload_config.load(&mut layouter)?;
         // let mut first_pass = SKIP_FIRST_PASS;
         let mut public_hash_cell = vec![];
         let params = default_config_params();
@@ -273,18 +265,22 @@ impl<F: PrimeField> Circuit<F> for DefaultCommitVerifyCircuit<F> {
                 let range = config.sha256_config.range().clone();
                 let gate = range.gate.clone();
 
-                // 1. Compute the SHA-256 hash of the payload
-                let payload_hash_result = config.sha256_config.digest(ctx, &self.payload_bytes, Some(self.payload_bytes.len()))?;
-                // Extract the assigned values from the hash result
-                let payload_hash_values: Vec<halo2_base::AssignedValue<F>> = payload_hash_result.output_bytes.to_vec();
+                // 1. Compute the SHA-256 hash of the commit payload
+                let payload_length = self.payload_bytes.len();
+                let round_size = 64; // SHA-256 block size
+                let precomputed_length = (payload_length / round_size + 1) * round_size;
+                let payload_hash_result = config.sha256_config.digest(ctx, &self.payload_bytes, Some(precomputed_length))?;
 
-                // 2. Verify the RSA signature
+                // 2. Extract substrings from the commit message
+                let commit_result = config.payload_config.match_and_hash(ctx, &mut config.sha256_config, &self.payload_bytes)?;
+
+                // 3. Verify the RSA signature
                 let e = RSAPubE::Fix(BigUint::from(Self::DEFAULT_E));
                 let public_key = RSAPublicKey::<F>::new(Value::known(self.public_key_n.clone()), e);
                 let signature = RSASignature::<F>::new(Value::known(BigUint::from_bytes_be(&self.signature_bytes)));
-                let (assigned_public_key, assigned_signature) = config.sign_verify_config.verify_signature(ctx, &payload_hash_values, public_key, signature.clone())?;
+                let (assigned_public_key, assigned_signature) = config.sign_verify_config.verify_signature(ctx, &payload_hash_result.output_bytes, public_key, signature)?;
 
-                // 3. Compute public input values
+                // 4. Compute public input values
                 let poseidon = PoseidonChipBn254_8_58::new(ctx, &gate);
                 let sign_commit = poseidon.hash_elements(ctx, &gate, &assigned_signature.c.limbs()).unwrap().0[0].clone();
                 let public_key_n_hash = poseidon.hash_elements(ctx, &gate, &assigned_public_key.n.limbs()).unwrap().0[0].clone();
@@ -292,15 +288,23 @@ impl<F: PrimeField> Circuit<F> for DefaultCommitVerifyCircuit<F> {
                 public_hash_cell.push(sign_commit.cell());
                 public_hash_cell.push(public_key_n_hash.cell());
 
-                // 4. Compute RLC of payload bytes
+                // 5. Compute RLC of commit message components
+                let mut rlc_inputs = vec![];
+                rlc_inputs.append(&mut commit_result.regex.masked_characters.clone());
+                rlc_inputs.append(&mut commit_result.regex.all_substr_ids.clone());
+
                 let mut rlc = gate.load_zero(ctx);
                 let mut coeff = sign_commit.clone();
-                for byte in self.payload_bytes.iter() {
-                    let byte_cell = gate.load_constant(ctx, F::from(*byte as u64));
-                    rlc = gate.mul_add(ctx, QuantumCell::Existing(&byte_cell), QuantumCell::Existing(&coeff), QuantumCell::Existing(&rlc));
+                for input in rlc_inputs.into_iter() {
+                    rlc = gate.mul_add(ctx, QuantumCell::Existing(&input), QuantumCell::Existing(&coeff), QuantumCell::Existing(&rlc));
                     coeff = gate.mul(ctx, QuantumCell::Existing(&sign_commit), QuantumCell::Existing(&coeff));
                 }
                 public_hash_cell.push(rlc.cell());
+
+                // 6. Add extracted substrings to public inputs
+                for value in commit_result.regex.masked_characters.iter() {
+                    public_hash_cell.push(value.cell());
+                }
 
                 range.finalize(ctx);
                 Ok(())
@@ -393,13 +397,10 @@ impl<F: PrimeField> DefaultCommitVerifyCircuit<F> {
             let limbs = decompose_biguint(&self.public_key_n, num_limbs, LIMB_BITS);
             poseidon_hash_fields(&limbs)
         };
-        let payload_params = config_params.body_config.as_ref().unwrap();
+        let payload_params = config_params.payload_config.as_ref().unwrap();
         let payload_str = String::from_utf8(self.payload_bytes.clone()).unwrap();
-        println!("payload_params {:?}", payload_params);
-        println!("payload_str {:?}", payload_str);
 
         let payload_substrs = get_payload_substrs(&payload_str, &payload_params.substr_regexes);
-        println!("payload_substrs {:?}", payload_substrs);
 
         DefaultCommitVerifyPublicInput::new(sign_commit, public_key_hash, payload_substrs)
     }
@@ -417,16 +418,13 @@ impl<F: PrimeField> DefaultCommitVerifyCircuit<F> {
             0,
             params.degree as usize,
         );
-        let header_params = params.header_config.as_ref().expect("header_config is required");
-        let body_params = params.body_config.as_ref().expect("body_config is required");
+        let payload_params = params.payload_config.as_ref().expect("payload_config is required");
         let sign_verify_params = params.sign_verify_config.as_ref().expect("sign_verify_config is required");
         let sha256_params = params.sha256_config.as_ref().expect("sha256_config is required");
-        assert_eq!(header_params.allstr_filepathes.len(), header_params.substr_filepathes.len());
-        assert_eq!(body_params.allstr_filepathes.len(), body_params.substr_filepathes.len());
 
         let sha256_config = Sha256DynamicConfig::configure(
             meta,
-            vec![body_params.max_variable_byte_size, header_params.max_variable_byte_size],
+            vec![payload_params.max_variable_byte_size],
             range_config.clone(),
             sha256_params.num_bits_lookup,
             sha256_params.num_advice_columns,
@@ -435,59 +433,31 @@ impl<F: PrimeField> DefaultCommitVerifyCircuit<F> {
 
         let sign_verify_config = SignVerifyConfig::configure(range_config.clone(), sign_verify_params.public_key_bits);
 
-        let bodyhash_allstr_def = AllstrRegexDef::read_from_text(&header_params.bodyhash_allstr_filepath);
-        let bodyhash_substr_def = SubstrRegexDef::read_from_text(&header_params.bodyhash_substr_filepath);
-        let bodyhash_defs = RegexDefs {
-            allstr: bodyhash_allstr_def,
-            substrs: vec![bodyhash_substr_def],
-        };
-        let mut bodyhash_substr_id = 1;
-        let header_regex_defs = header_params
+        let payload_regex_defs = payload_params
             .allstr_filepathes
             .iter()
-            .zip(header_params.substr_filepathes.iter())
+            .zip(payload_params.substr_filepathes.iter())
             .map(|(allstr_path, substr_pathes)| {
                 let allstr = AllstrRegexDef::read_from_text(&allstr_path);
                 let substrs = substr_pathes.into_iter().map(|path| SubstrRegexDef::read_from_text(&path)).collect_vec();
-                bodyhash_substr_id += substrs.len();
                 RegexDefs { allstr, substrs }
             })
             .collect_vec();
-        let header_config = RegexSha2Config::configure(
-            meta,
-            header_params.max_variable_byte_size,
-            header_params.skip_prefix_bytes_size.unwrap_or(0),
-            range_config.clone(),
-            vec![header_regex_defs, vec![bodyhash_defs]].concat(),
-        );
 
-        let body_regex_defs = body_params
-            .allstr_filepathes
-            .iter()
-            .zip(body_params.substr_filepathes.iter())
-            .map(|(allstr_path, substr_pathes)| {
-                let allstr = AllstrRegexDef::read_from_text(&allstr_path);
-                let substrs = substr_pathes.into_iter().map(|path| SubstrRegexDef::read_from_text(&path)).collect_vec();
-                RegexDefs { allstr, substrs }
-            })
-            .collect_vec();
-        let body_config = RegexSha2Base64Config::configure(
+        let payload_config = RegexSha2Config::configure(
             meta,
-            body_params.max_variable_byte_size,
-            body_params.skip_prefix_bytes_size.unwrap_or(0),
+            payload_params.max_variable_byte_size,
+            payload_params.skip_prefix_bytes_size.unwrap_or(0),
             range_config,
-            body_regex_defs,
+            payload_regex_defs,
         );
-        let chars_shift_config = CharsShiftConfig::configure(header_params.max_variable_byte_size, 44, bodyhash_substr_id as u64);
 
         let instances = meta.instance_column();
         meta.enable_equality(instances);
         DefaultCommitVerifyConfig {
             sha256_config,
             sign_verify_config,
-            header_config,
-            body_config,
-            chars_shift_config,
+            payload_config,
             instances,
         }
     }
@@ -515,7 +485,7 @@ mod test {
 
     #[test]
     fn test_generated_email1() {
-        temp_env::with_var(EMAIL_VERIFY_CONFIG_ENV, Some("./configs/test1_email_verify.config"), || {
+        temp_env::with_var(COMMIT_VERIFY_CONFIG_ENV, Some("./configs/test1_email_verify.config"), || {
             let regex_bodyhash_decomposed: DecomposedRegexConfig = serde_json::from_reader(File::open("./test_data/bodyhash_defs.json").unwrap()).unwrap();
             regex_bodyhash_decomposed
                 .gen_regex_files(
@@ -570,7 +540,7 @@ mod test {
 
     #[test]
     fn test_generated_email2() {
-        temp_env::with_var(EMAIL_VERIFY_CONFIG_ENV, Some("./configs/test2_email_verify.config"), || {
+        temp_env::with_var(COMMIT_VERIFY_CONFIG_ENV, Some("./configs/test2_email_verify.config"), || {
             let regex_bodyhash_decomposed: DecomposedRegexConfig = serde_json::from_reader(File::open("./test_data/bodyhash_defs.json").unwrap()).unwrap();
             regex_bodyhash_decomposed
                 .gen_regex_files(
@@ -699,7 +669,7 @@ mod test {
             cfdkim::DkimPublicKey::Rsa(pk) => pk,
             _ => panic!("not supportted public key type."),
         };
-        temp_env::with_var(EMAIL_VERIFY_CONFIG_ENV, Some("./configs/test_ex1_email_verify.config"), move || {
+        temp_env::with_var(COMMIT_VERIFY_CONFIG_ENV, Some("./configs/test_ex1_email_verify.config"), move || {
             let params = default_config_params();
             let public_key_n = BigUint::from_bytes_be(&public_key.n().clone().to_bytes_be());
             let circuit = DefaultCommitVerifyCircuit::<Fr>::new(email_bytes.clone(), public_key_n);
@@ -768,7 +738,7 @@ mod test {
             cfdkim::DkimPublicKey::Rsa(pk) => pk,
             _ => panic!("not supportted public key type."),
         };
-        temp_env::with_var(EMAIL_VERIFY_CONFIG_ENV, Some("./configs/test_ex2_email_verify.config"), move || {
+        temp_env::with_var(COMMIT_VERIFY_CONFIG_ENV, Some("./configs/test_ex2_email_verify.config"), move || {
             let params = default_config_params();
             let public_key_n = BigUint::from_bytes_be(&public_key.n().clone().to_bytes_be());
             let circuit = DefaultCommitVerifyCircuit::<Fr>::new(email_bytes.clone(), public_key_n);
@@ -816,7 +786,7 @@ mod test {
             cfdkim::DkimPublicKey::Rsa(pk) => pk,
             _ => panic!("not supportted public key type."),
         };
-        temp_env::with_var(EMAIL_VERIFY_CONFIG_ENV, Some("./configs/test_ex3_email_verify.config"), move || {
+        temp_env::with_var(COMMIT_VERIFY_CONFIG_ENV, Some("./configs/test_ex3_email_verify.config"), move || {
             let params = default_config_params();
             let public_key_n = BigUint::from_bytes_be(&public_key.n().clone().to_bytes_be());
             let circuit = DefaultCommitVerifyCircuit::<Fr>::new(email_bytes.clone(), public_key_n);
@@ -885,7 +855,7 @@ mod test {
             cfdkim::DkimPublicKey::Rsa(pk) => pk,
             _ => panic!("not supportted public key type."),
         };
-        temp_env::with_var(EMAIL_VERIFY_CONFIG_ENV, Some("./configs/test_ex1_email_verify.config"), move || {
+        temp_env::with_var(COMMIT_VERIFY_CONFIG_ENV, Some("./configs/test_ex1_email_verify.config"), move || {
             let params = default_config_params();
             let mut public_key_n_bytes = public_key.n().clone().to_bytes_be();
             for i in 0..256 {
@@ -958,7 +928,7 @@ mod test {
             cfdkim::DkimPublicKey::Rsa(pk) => pk,
             _ => panic!("not supportted public key type."),
         };
-        temp_env::with_var(EMAIL_VERIFY_CONFIG_ENV, Some("./configs/test_ex1_email_verify.config"), move || {
+        temp_env::with_var(COMMIT_VERIFY_CONFIG_ENV, Some("./configs/test_ex1_email_verify.config"), move || {
             let params = default_config_params();
             let public_key_n = BigUint::from_bytes_be(&public_key.n().clone().to_bytes_be());
             let circuit = DefaultCommitVerifyCircuit::<Fr>::new(email_bytes.clone(), public_key_n);

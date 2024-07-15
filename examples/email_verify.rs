@@ -28,7 +28,7 @@
 // use halo2_rsa::{RSAPubE, RSAPublicKey, RSASignature};
 // use halo2_zk_email::utils::get_email_substrs;
 // use halo2_zk_email::{evm_prove_app, evm_verify_app, gen_app_key, gen_evm_verifier, gen_params};
-// use halo2_zk_email::{DefaultCommitVerifyCircuit, DefaultCommitVerifyPublicInput, EMAIL_VERIFY_CONFIG_ENV};
+// use halo2_zk_email::{DefaultCommitVerifyCircuit, DefaultCommitVerifyPublicInput, COMMIT_VERIFY_CONFIG_ENV};
 // use itertools::Itertools;
 // use mailparse::parse_mail;
 // use num_bigint::BigUint;
@@ -103,7 +103,7 @@
 
 //     // 2. In this example, we generate a dummy email to construct an email verification circuit based on its configuration file ("./examples/example_email_verify.config").
 //     let circuit_config_path = "./examples/example_email_verify.config";
-//     set_var(EMAIL_VERIFY_CONFIG_ENV, circuit_config_path);
+//     set_var(COMMIT_VERIFY_CONFIG_ENV, circuit_config_path);
 //     let config_params = DefaultCommitVerifyCircuit::<Fr>::read_config_params();
 //     let sign_verify_config = config_params.sign_verify_config.expect("sign_verify_config is required");
 //     let mut rng = thread_rng();

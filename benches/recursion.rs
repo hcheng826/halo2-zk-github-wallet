@@ -3,7 +3,7 @@
 // use halo2_base::halo2_proofs::poly::{commitment::Params, kzg::commitment::ParamsKZG};
 // use halo2_base::{gates::range::RangeConfig, utils::PrimeField, Context};
 // use halo2_zk_email::DefaultCommitVerifyCircuit;
-// use halo2_zk_email::{downsize_params, evm_prove_agg, gen_agg_key, gen_app_key, gen_params, EMAIL_VERIFY_CONFIG_ENV};
+// use halo2_zk_email::{downsize_params, evm_prove_agg, gen_agg_key, gen_app_key, gen_params, COMMIT_VERIFY_CONFIG_ENV};
 // use sha2::{self, Digest, Sha256};
 // use snark_verifier_sdk::halo2::{aggregation::AggregationCircuit, gen_proof_shplonk, gen_snark_shplonk};
 // use std::env::set_var;
@@ -53,7 +53,7 @@
 // fn bench_email_verify_recursion1(c: &mut Criterion) {
 //     let mut group = c.benchmark_group("email bench1 with recursion");
 //     group.sample_size(10);
-//     set_var(EMAIL_VERIFY_CONFIG_ENV, APP_CONFIG_PATH);
+//     set_var(COMMIT_VERIFY_CONFIG_ENV, APP_CONFIG_PATH);
 //     let app_config_params = DefaultCommitVerifyCircuit::<Fr>::read_config_params();
 //     let agg_params_path = format!("benches/params_{}.bin", AGG_PARAMS_K);
 //     let app_params_path = format!("benches/params_{}.bin", app_config_params.degree);
@@ -96,7 +96,7 @@
 //     //     .await
 //     //     .unwrap();
 //     // });
-//     // set_var(EMAIL_VERIFY_CONFIG_ENV, "./configs/bench_agg_email_verify.config");
+//     // set_var(COMMIT_VERIFY_CONFIG_ENV, "./configs/bench_agg_email_verify.config");
 //     // let config_params = DefaultCommitVerifyCircuit::<Fr>::read_config_params();
 //     // let mut rng = thread_rng();
 //     // let _private_key = RsaPrivateKey::new(&mut rng, config_params.public_key_bits).expect("failed to generate a key");
